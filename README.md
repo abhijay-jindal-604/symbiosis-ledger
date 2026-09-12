@@ -110,6 +110,7 @@ needed to re-run `agents/negotiation_agent.py` itself (see below).
 | Bisect-history branch (seeded bug for the recovery beat) | `demo/bisect-history`, seeded bad commit `d714804` — never on `main` |
 | Receiver memory profiles | `receivers/profiles/<receiver_id>.json`, written by `agents/orchestrate.py` |
 | **Second demo stream** (real EPA data, resolved by the tool-calling agent) | claim PRs [#9 kiln-b](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/9) / [#10 wwtp-c](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/10); resolution commit `3c0c9a1`; log `logs/negotiation/ALD000622464-D009-W403-2009-20260912T095400Z.json`; manifests `out/manifest-ALD000622464-D009-W403-2009-kiln-b.html` and `...-wwtp-c.html` (two files: a genuine 2-way split needs two shipments) |
+| **Blind two-call negotiation protocol** (`negotiate_blind()`, [PR #13](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/13)) | `agents/negotiation_agent.py`; real comparison run vs. the single-call protocol in `logs/negotiation-compare/ALD000622464-D009-W403-2009-20260912T115128Z-{single,blind}.json` |
 
 ## Memory and the recovery beat
 
@@ -274,8 +275,10 @@ overstate what produced a resolution:
 
 `data/br_reporting_snapshot.json` was pulled 2026-09-12 via
 `https://data.epa.gov/efservice/BR_REPORTING/rows/{start}:{end}/JSON`,
-paginated across rows 0–6000 (6 rows retained: the demo generator/receiver
-pairs plus supporting context rows). CI reads this committed snapshot rather
+paginated across rows 0–6000 (7 rows retained: both demo generators'
+receiver pairs plus supporting context rows — a 7th row for the second
+stream's generator, `ALD000622464`, was added when that stream was built).
+CI reads this committed snapshot rather
 than calling EPA live, for reliability and so CI doesn't hammer a government
 endpoint on every run. `demo/live_query.py` is the one live call in this
 repo, shown on camera, and it prints a MATCH/DIFFER verdict against this
