@@ -78,8 +78,11 @@ python demo/live_query.py
 pip install -r requirements.txt && pytest
 
 # (c) Watch the eligibility gate deny a real receiver with no recovery
-# history for this waste code — the same check that runs in CI.
-python agents/eligibility_check.py --claimant recycler-d
+# history for this waste code — the same check that runs in CI. recycler-d's
+# denial-evidence claim was deliberately never merged into any stream file
+# on main (see PR #3), so --stream must be given explicitly here rather
+# than relying on claims: auto-discovery, which has nothing to find it in.
+python agents/eligibility_check.py --claimant recycler-d --stream streams/AK8570028649-D009-W301-2001.yaml
 # -> ELIGIBILITY DENIED — receiver NED981723513 has 0 recorded receipts ...
 ```
 
