@@ -11,9 +11,23 @@ waste:
   report_cycle: 2009
 current_disposition:
   management_category: INCINERATION
-status: CLAIMED_BY_kiln-b
+status: RESOLVED_SPLIT
 claims:
 - claimant: kiln-b
-  requested_tons: 48.0135
+  allocated_tons: 20.0
+  schedule: one-time delivery
   disclosed_constraint: can take up to 20 tons as a one-time delivery; no scheduling constraint
-resolution: null
+- claimant: wwtp-c
+  allocated_tons: 28.0135
+  schedule: one-time delivery
+  disclosed_constraint: can accept any quantity as a one-time delivery, no scheduling constraint, but
+    needs at least 25 tons to justify the pickup logistically
+resolution:
+  method: negotiated_split
+  resolved_by: negotiation_agent_v1
+  feasible: true
+  explanation: 'The total available stream of 48.0135 tons is split to satisfy both constraints: kiln-b
+    receives its maximum capacity of 20 tons as a one-time delivery, and wwtp-c receives the remaining
+    28.0135 tons, which exceeds its logistical minimum threshold of 25 tons.'
+  log: logs/negotiation/ALD000622464-D009-W403-2009-20260912T095400Z.json
+  timestamp: '2026-09-12T09:54:09.578570+00:00'
