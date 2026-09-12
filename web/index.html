@@ -71,8 +71,7 @@
      value shown traces to a committed artifact; the raw log stays one
      disclosure away rather than being replaced by this rendering. */
   .evidence {
-    background: #10141b; border: 1px solid var(--border);
-    border-left: 2px solid var(--accent); border-radius: 0 6px 6px 0;
+    background: #10141b; border: 1px solid var(--border); border-radius: 6px;
     padding: 16px 18px; margin-top: 8px;
   }
   .evidence-head {
@@ -109,9 +108,8 @@
   .call.verify .ord { border-color: var(--ok); color: var(--ok); background: rgba(76,175,125,.14); }
   .call.verify .ret, .call.verify .ret strong { color: var(--ok); }
   .call.verify .ret {
-    background: rgba(76,175,125,.08); border-left: 2px solid var(--ok);
-    padding: 5px 9px; margin-left: -2px; border-radius: 0 3px 3px 0;
-    display: inline-block;
+    background: rgba(76,175,125,.08); border: 1px solid rgba(76,175,125,.28);
+    padding: 5px 9px; border-radius: 3px; display: inline-block;
   }
 
   /* Allocation against stream capacity, the way a manifest states quantity. */
