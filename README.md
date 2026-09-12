@@ -180,6 +180,59 @@ multi-recipient resolution — `out/manifest-<stream_id>-<claimant>.html` —
 rather than one file that would otherwise silently drop every recipient
 but the first.
 
+## A second negotiation protocol: two calls, blind to each other
+
+`negotiate()` runs one call that sees both claimants' disclosed constraints
+at once — convenient, but not how two real counterparties would negotiate
+through a neutral arbiter: neither would normally hand its constraint
+straight to the other side's reasoning process. `negotiate_blind()`
+(`agents/negotiation_agent.py`) instead runs two independent calls, one per
+claimant, each seeing only its own request, its own disclosed constraint,
+and the stream's shared public facts — never the other claimant's name,
+request, or constraint text. If the two blind proposals don't fit within
+the tons available, each side gets exactly one revision round, told only
+the numeric shortfall, never who the other claimant is. If they still don't
+fit, the reconciliation is a deterministic proportional scale-down, never a
+coin flip or an arbitrary pick of one side over the other.
+
+Run for real against the same second-stream disclosed constraints already
+used above (`demo/compare_negotiation_protocols.py`, read-only — it never
+touches `streams/*.yaml` or commits anything, since those files already
+carry the real, CODEOWNERS-approved `negotiate()` resolution and that audit
+trail shouldn't be rewritten by a comparison run), the two protocols landed
+on genuinely different splits:
+
+| Protocol | kiln-b | wwtp-c | Unclaimed |
+|---|---|---|---|
+| `negotiate()` (single call, sees both sides) | 20.0 | 28.0135 | 0 |
+| `negotiate_blind()` (two calls, blind) | 20.0 | 25.0 | 3.0135 |
+
+Both splits are valid and honest given what each protocol's model call
+actually knew. The single call saw that 28.0135 tons were left over after
+kiln-b's 20-ton cap and handed all of it to wwtp-c. Blind wwtp-c never
+learned there was slack beyond its own logistical floor of 25 tons — only
+that the two initial requests exceeded the 48.0135 available by 20 tons —
+so it reduced to exactly its own stated minimum and stopped there, honestly
+leaving the remainder unclaimed rather than guessing at a number it had no
+basis for. That gap is the real, load-bearing trade-off of negotiating
+blind: it protects each side from disclosing to the other, but a genuine
+arbiter with full visibility can find value blind negotiation structurally
+cannot see. Logged verbatim, tool calls and all, in
+`logs/negotiation-compare/`.
+
+Getting this working for real surfaced two more genuine bugs, on top of the
+two documented above: the python-genai docs' own example wraps a function
+response in `Content(role="tool", ...)`, and `gemini-3.5-flash` accepts
+that, but `gemini-3.6-flash`/`3.7-flash`/`3.8-flash` all reject it outright
+("Role 'tool' is not supported") — `agents/llm_gemini.py` now uses `"user"`
+instead, which every version accepts. Separately, `-lite` models
+(`gemini-3.5-flash-lite`) reject `thinking_config` outright with a bare 400
+and no further detail, apparently having no thinking mode to budget at all
+— `llm_gemini.py` now skips that config key for any model with `"lite"` in
+its name. Both were found the same way everything else in this project was:
+by actually running it against the real API, not by guessing at the SDK's
+shape.
+
 ## On reproducibility and the LLM
 
 Re-running `agents/negotiation_agent.py` will produce a *differently worded*,

@@ -449,3 +449,284 @@ def _write_log(log_path, stream_id, attempts, path_taken, final_status):
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     with open(log_path, "w") as f:
         json.dump(payload, f, indent=2)
+
+
+# --- two-call blind variant ----------------------------------------------
+#
+# negotiate() above runs a single call that sees both claimants' disclosed
+# constraints at once -- convenient, but not how two real counterparties
+# would actually negotiate: neither would normally hand its constraint
+# straight to the other side's model call. negotiate_blind() instead runs
+# two independent calls, one per claimant, each seeing only its own request,
+# its own disclosed constraint, and the stream's shared public facts (id,
+# waste code, total available tons). Neither call ever sees the other
+# claimant's name, request, or constraint text. If the two independent
+# proposals don't fit within available_tons, each side gets exactly one
+# chance to revise, told only the numeric shortfall -- never the other
+# side's identity or constraint. If they still don't fit, the reconciliation
+# is a deterministic proportional scale-down, never a coin flip or an
+# arbitrary pick of one side over the other.
+
+SIDE_PROMPT_TEMPLATE = """You represent {claimant}, one of two facilities that both want a share of the same industrial byproduct stream. You do NOT see the other facility's identity, request, or constraints -- you are negotiating blind, disclosing only your own position.
+
+Stream: {stream_id}
+Total available: {available_tons} tons of waste code {federal_waste_codes} (form {form_code})
+Your request: {requested_tons} tons
+Your disclosed constraint: "{disclosed_constraint}"
+{extra_note}
+You have three tools available:
+- lookup_receipt_history(claimant): see your own real recorded receipt history behind your eligibility.
+- get_receiver_profile(claimant): see your own prior acceptances/rejections in this system.
+- check_allocation(allocation): verify a single-entry candidate allocation ([{{"claimant": "...", "tons": N}}])
+  is arithmetically valid (tons >= 0 and <= the total available) before committing to it.
+
+Propose the tons and schedule you actually need, honestly reflecting your own disclosed constraint --
+do not pad your request, since a later round can only ever ask you to reduce it, never to increase it.
+If your disclosed constraint states no quantity or schedule you can act on, do NOT invent a number:
+set "feasible" to false and name that constraint in the explanation as the reason.
+
+Once you are done calling tools, your final response must be the JSON object and nothing else:
+no prose, no markdown code fences, no commentary, no further tool calls.
+
+Final answer format, strict JSON only:
+{{"feasible": true|false, "tons": N, "schedule": "...", "explanation": "..."}}"""
+
+
+def build_side_prompt(claim, stream, extra_note=""):
+    return SIDE_PROMPT_TEMPLATE.format(
+        claimant=claim["claimant"],
+        stream_id=stream["stream_id"],
+        available_tons=stream["waste"]["available_tons"],
+        federal_waste_codes=stream["waste"]["federal_waste_codes"],
+        form_code=stream["waste"]["form_code"],
+        requested_tons=claim["requested_tons"],
+        disclosed_constraint=claim.get("disclosed_constraint", ""),
+        extra_note=extra_note,
+    )
+
+
+def validate_side_response(parsed, available_tons):
+    """Validates a single-side blind proposal. Returns a normalized dict
+    {"feasible", "tons" (float or None), "schedule", "explanation"}.
+    Raises NegotiationError on malformed input (retry-worthy)."""
+    if not isinstance(parsed, dict):
+        raise NegotiationError("response is not a JSON object")
+
+    feasible = parsed.get("feasible")
+    tons_raw = parsed.get("tons")
+    schedule = parsed.get("schedule") or ""
+    explanation = parsed.get("explanation") or ""
+
+    if feasible is False and tons_raw is None:
+        return {"feasible": False, "tons": None, "schedule": schedule, "explanation": explanation}
+
+    if tons_raw is None:
+        raise NegotiationError("feasible is not false and tons is missing")
+
+    tons = _coerce_tons(tons_raw)
+    if tons < 0:
+        raise NegotiationError(f"negative tons ({tons})")
+    if tons > available_tons + 0.01:
+        raise NegotiationError(f"proposed {tons} tons exceeds total available {available_tons}")
+
+    return {"feasible": feasible is not False, "tons": tons, "schedule": schedule,
+            "explanation": explanation}
+
+
+def _side_deterministic_fallback(claim, available_tons):
+    tons = min(claim.get("requested_tons") or 0.0, available_tons)
+    return {
+        "feasible": True, "tons": float(tons), "schedule": "fallback: model path failed",
+        "explanation": f"Deterministic fallback for {claim['claimant']}: the model path failed "
+        "after its retry budget; its stated request was taken at face value.",
+    }
+
+
+def _run_side_negotiation(claim, stream, extra_note, llm_call, ctx, max_content_retries,
+                           max_api_retries, api_backoff, max_tool_turns):
+    """One claimant's own blind call, with the same content-retry/tool-turn
+    loop shape as negotiate()'s main loop, but validated against
+    validate_side_response() and scoped to a single claimant's proposal."""
+    available_tons = ctx["available_tons"]
+    base_prompt = build_side_prompt(claim, stream, extra_note)
+    attempts = []
+    last_error = None
+
+    for content_attempt in range(max_content_retries + 1):
+        opening = base_prompt if content_attempt == 0 else (
+            base_prompt + f'\n\nYour previous response was rejected: {last_error} '
+            "Return corrected strict JSON as your final answer."
+        )
+        messages = [{"role": "user", "content": opening}]
+        tool_log = []
+        raw_text = None
+        api_error = None
+
+        for _tool_turn in range(max_tool_turns):
+            response, err = _call_with_api_retries(llm_call, messages, TOOL_SPECS,
+                                                     max_api_retries, api_backoff)
+            if err is not None:
+                api_error = f"API error: {err}"
+                break
+
+            tool_calls = response.get("tool_calls")
+            if tool_calls:
+                messages.append({"role": "assistant", "tool_calls": tool_calls})
+                for call in tool_calls:
+                    result = _execute_tool(call["name"], call.get("arguments"), ctx)
+                    tool_log.append({"name": call["name"], "arguments": call.get("arguments"),
+                                      "result": result})
+                    messages.append({"role": "tool", "name": call["name"],
+                                      "tool_call_id": call.get("id", ""), "content": result})
+                continue
+
+            raw_text = response.get("text", "")
+            break
+        else:
+            last_error = f"model made {max_tool_turns} tool calls without a final answer"
+
+        if api_error is not None:
+            last_error = api_error
+            attempts.append({"n": len(attempts) + 1, "prompt": opening, "raw_response": None,
+                              "outcome": "api_error", "reason": last_error, "tool_calls": tool_log})
+            continue
+
+        if raw_text is None:
+            attempts.append({"n": len(attempts) + 1, "prompt": opening, "raw_response": None,
+                              "outcome": "no_final_answer", "reason": last_error,
+                              "tool_calls": tool_log})
+            continue
+
+        try:
+            span = extract_json_span(raw_text)
+            parsed = json.loads(span)
+            normalized = validate_side_response(parsed, available_tons)
+            attempts.append({"n": len(attempts) + 1, "prompt": opening, "raw_response": raw_text,
+                              "outcome": "accepted", "reason": None, "tool_calls": tool_log})
+            return normalized, attempts
+        except NegotiationError as e:
+            last_error = str(e)
+            attempts.append({"n": len(attempts) + 1, "prompt": opening, "raw_response": raw_text,
+                              "outcome": "rejected", "reason": last_error, "tool_calls": tool_log})
+            continue
+
+    return _side_deterministic_fallback(claim, available_tons), attempts
+
+
+def negotiate_blind(stream, claim_a, claim_b, llm_call, lookup_receipt_history=None,
+                     get_receiver_profile=None, log_path=None, max_content_retries=1,
+                     max_api_retries=2, api_backoff=(2, 6), max_tool_turns=6):
+    """Two-call blind negotiation: claim_a and claim_b are each resolved by
+    their own independent call via _run_side_negotiation(), neither call
+    ever seeing the other claimant's name, request, or disclosed constraint.
+    If the two proposals don't fit within available_tons, each feasible side
+    gets one revision round told only the numeric shortfall. If they still
+    don't fit, the reconciliation is a deterministic proportional
+    scale-down -- never an arbitrary pick of one side over the other.
+    """
+    available_tons = stream["waste"]["available_tons"]
+    if available_tons is None or available_tons <= 0 or "requested_tons" not in claim_a \
+            or "requested_tons" not in claim_b:
+        result = {
+            "status": "UNRESOLVED", "method": None, "resolved_by": None,
+            "feasible": False, "explanation": "available_tons <= 0 or requested_tons missing; "
+            "not calling the model.",
+        }
+        _write_blind_log(log_path, stream["stream_id"], {}, 0, "UNRESOLVED", None)
+        return result
+
+    ctx = {
+        "available_tons": available_tons,
+        "lookup_receipt_history": lookup_receipt_history or _default_lookup_receipt_history,
+        "get_receiver_profile": get_receiver_profile or _default_get_receiver_profile,
+    }
+
+    all_attempts = {"round_1": {}, "round_2": {}}
+
+    def run_side(claim, extra_note, round_name):
+        result, attempts = _run_side_negotiation(
+            claim, stream, extra_note, llm_call, ctx,
+            max_content_retries, max_api_retries, api_backoff, max_tool_turns,
+        )
+        all_attempts[round_name][claim["claimant"]] = attempts
+        return result
+
+    prop_a = run_side(claim_a, "", "round_1")
+    prop_b = run_side(claim_b, "", "round_1")
+    tons_a = prop_a["tons"] or 0.0
+    tons_b = prop_b["tons"] or 0.0
+    total = tons_a + tons_b
+    round_used = 1
+
+    if total > available_tons + 0.01:
+        round_used = 2
+        shortfall = total - available_tons
+        note = (
+            f"\n\nA second, independent facility also wants a share of this same stream. Between "
+            f"you both, the initial requests exceed the {available_tons} tons available by "
+            f"{shortfall:.4f} tons. You are not told who the other facility is, or what it needs -- "
+            "only this total shortfall. If your disclosed constraint allows any flexibility, revise "
+            "your own request downward. If it truly does not, restate your same floor and explain "
+            "why it cannot go lower."
+        )
+        if prop_a["feasible"]:
+            prop_a = run_side(claim_a, note, "round_2")
+        if prop_b["feasible"]:
+            prop_b = run_side(claim_b, note, "round_2")
+        tons_a = prop_a["tons"] or 0.0
+        tons_b = prop_b["tons"] or 0.0
+        total = tons_a + tons_b
+
+    both_feasible = prop_a["feasible"] and prop_b["feasible"]
+    explanation = f"{claim_a['claimant']}: {prop_a.get('explanation', '')} | {claim_b['claimant']}: {prop_b.get('explanation', '')}"
+
+    if total <= available_tons + 0.01:
+        status = "RESOLVED_SPLIT" if both_feasible else "RESOLVED_PARTIAL"
+        method = "negotiated_split_blind" if both_feasible else "negotiated_partial_blind"
+    else:
+        # Two independently-blind proposals, each already given a chance to
+        # revise, still don't fit -- reconcile deterministically rather than
+        # asking either side to yield to the other with no principled basis.
+        pre_scale_total = total
+        scale = available_tons / total if total > 0 else 0.0
+        tons_a, tons_b = tons_a * scale, tons_b * scale
+        status = "RESOLVED_PARTIAL"
+        method = "negotiated_partial_blind_prorated"
+        explanation = (
+            f"Two independent, blind proposals (after a revision round) still summed to "
+            f"{pre_scale_total:.4f} tons against {available_tons} available; scaled both down "
+            f"proportionally rather than picking one side over the other. {explanation}"
+        )
+
+    allocation = [
+        {"claimant": claim_a["claimant"], "tons": tons_a, "schedule": prop_a.get("schedule", "")},
+        {"claimant": claim_b["claimant"], "tons": tons_b, "schedule": prop_b.get("schedule", "")},
+    ]
+    result = {
+        "status": status,
+        "method": method,
+        "resolved_by": "negotiation_agent_blind_v1",
+        "feasible": both_feasible,
+        "explanation": explanation,
+        "allocation": allocation,
+    }
+    _write_blind_log(log_path, stream["stream_id"], all_attempts, round_used, status, method)
+    return result
+
+
+def _write_blind_log(log_path, stream_id, all_attempts, rounds_used, final_status, method):
+    if not log_path:
+        return
+    payload = {
+        "stream_id": stream_id,
+        "model": os.environ.get("NEGOTIATION_MODEL", "unknown"),
+        "temperature": 0,
+        "protocol": "two_call_blind",
+        "rounds_used": rounds_used,
+        "attempts": all_attempts,
+        "final_status": final_status,
+        "method": method,
+    }
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "w") as f:
+        json.dump(payload, f, indent=2)
