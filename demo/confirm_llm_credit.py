@@ -19,6 +19,6 @@ from llm_gemini import get_llm_call  # noqa: E402
 if __name__ == "__main__":
     llm_call = get_llm_call()
     reply = llm_call("Reply with exactly one word: OK")
-    print(f"model={os.environ.get('NEGOTIATION_MODEL', 'gemini-flash-latest')}")
+    print(f"model={os.environ.get('NEGOTIATION_MODEL', 'gemini-3.5-flash')}")
     print(f"raw reply: {reply!r}")
     print("CREDIT CONFIRMED" if reply.strip() else "EMPTY RESPONSE")

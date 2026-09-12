@@ -8,7 +8,7 @@ locally; never wired into CI, which reads the committed snapshot only).
 """
 import os
 
-MODEL_NAME = os.environ.get("NEGOTIATION_MODEL", "gemini-flash-latest")
+MODEL_NAME = os.environ.get("NEGOTIATION_MODEL", "gemini-3.5-flash")
 
 
 def get_llm_call():
@@ -22,6 +22,7 @@ def get_llm_call():
     from google import genai
     from google.genai import types
 
+    os.environ.setdefault("NEGOTIATION_MODEL", MODEL_NAME)
     client = genai.Client(api_key=api_key)
 
     def llm_call(prompt: str) -> str:
@@ -31,6 +32,7 @@ def get_llm_call():
             config=types.GenerateContentConfig(
                 temperature=0,
                 max_output_tokens=512,
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
         return response.text
