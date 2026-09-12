@@ -6,7 +6,7 @@
 
 Built for **Bit N Build 2026** — *Supply Chain Circularity & Industrial Symbiosis*.
 
-**Demo video:** *link coming soon*
+**▶ [Watch the demo video](https://drive.google.com/file/d/1Ti0UJV6GrWfL0axcn0DEeqYtzNUi3h7m/view?usp=sharing)**
 
 ---
 
