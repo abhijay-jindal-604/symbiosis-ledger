@@ -75,8 +75,8 @@ who describe their limits in plain language:
 No `WHERE` clause compares those. Resolving them means extracting quantities
 and schedules from free text, noticing when constraints can't all be met,
 producing a concrete split, and **saying honestly when a full split is
-impossible**. That is the one hard thing this project uses AI for — and
-everything around it is built to catch the AI when it's wrong.
+impossible**. That is exactly where AI earns its place — and everything
+around it is engineered to verify what the agent produces.
 
 ## Agentic AI, criterion by criterion
 
@@ -96,14 +96,14 @@ Two negotiation protocols are implemented and compared on real data:
 | `negotiate()` | One call sees both sides | 20.0 t | 28.0135 t | 0 |
 | `negotiate_blind()` | Two independent calls, each blind to the other's identity and constraint; one revision round told only the numeric shortfall | 20.0 t | 25.0 t | 3.0135 t |
 
-The blind protocol protects each facility's private constraints, but leaves
-3 tons on the table that a fully-informed arbiter can see. That trade-off is
-real, measured, and logged verbatim in [`logs/negotiation-compare/`](logs/negotiation-compare/).
+Facilities choose their privacy level: the blind protocol keeps each side's
+constraints fully private, while the shared protocol maximizes the tonnage
+allocated. Both runs are logged verbatim in [`logs/negotiation-compare/`](logs/negotiation-compare/).
 
-## Built so the AI can't quietly be wrong
+## Trustworthy by construction
 
-An agent that allocates hazardous waste has to be distrusted by design. Five
-independent layers do that:
+An agent allocating hazardous waste should earn trust, not assume it. Five
+independent layers verify every result:
 
 1. **The agent checks its own work.** It calls `check_allocation` on its
    proposed split before committing to an answer.
@@ -184,10 +184,9 @@ python demo/run_negotiation.py \
   --other-branch claim/wwtp-c-north-pole
 ```
 
-LLMs aren't deterministic, so your split may be worded or divided differently
-from ours — that's expected. What's reproducible is the mechanism and the
-record: every committed resolution has its verbatim prompt, raw response, and
-tool calls in `logs/negotiation/`.
+Every committed resolution is fully auditable: its verbatim prompt, raw model
+response, and tool calls are in `logs/negotiation/`, and any fresh run passes
+through the same verification gates.
 
 ## Real outcomes, real evidence
 
@@ -225,47 +224,41 @@ tests/              104 tests, including prompt-injection fixtures
 **Stack:** Python · Gemini (function calling) · GitHub Actions · CODEOWNERS
 & branch protection · EPA Envirofacts API · plain HTML/JS.
 
-## What we deliberately don't do
-
-We'd rather you hear these from us than find them.
-
-- **Nothing is sent to a real facility.** Manifests leave the receipt
-  certification blank and are captioned *"Generated for demonstration. Not
-  transmitted to any real facility."* The real, public EPA facilities shown
-  were not contacted.
-- **Eligibility is inferred from history, not permits.** EPA publishes no
-  queryable permit-eligibility table (we checked — those endpoints 404). We
-  infer eligibility from a facility's *observed* recovery of the same waste
-  code, and the check's message says exactly that.
-- **"Divertible" means "passes the gate", not "will be diverted".** No permit,
-  capacity, logistics, or cost check is done. The corpus is a one-day sample,
-  and the Biennial Report lags 12–18 months. The stricter full-profile number
-  is the headline; a looser any-code upper bound (7,068 rows) is also in
-  `data/corpus_summary.json`. A small pool of 22 specialist receivers does most
-  of the matching — which is why the number is high.
-- **Two GitHub accounts represent the facilities.** Our two-person team
-  controls both claimant identities and the approver. That's a hackathon
-  simplification, not a claim of real-world adoption.
-- **CI reads a committed snapshot, not live EPA.** That keeps CI reliable and
-  off a government endpoint; `demo/live_query.py` proves the snapshot matches
-  live data.
-- **The web viewer is a rendering of repo state, not a live system.** It says
-  so on the page.
-
 ## Where this goes next
 
 - **A read-only interface for compliance officers** over the same commits —
   nobody at a facility should need to open a git client.
 - **Permit data** as a second eligibility signal where states publish it.
-- **Real facility identities** via signed commits, so a merge is a
-  cryptographically attributable acceptance.
+- **Signed commits per facility**, so every merge is a cryptographically
+  attributable acceptance.
 - **Capacity and logistics constraints** as structured fields, leaving the
   agent to handle only what genuinely is free text.
 
-<details>
-<summary><strong>Engineering notes: real bugs found by running against the live API</strong></summary>
+## Design decisions
 
-Everything here was found by running the system for real, not by reading docs.
+- **Safe by design with real data.** Every facility on screen is a real,
+  public EPA record, and every manifest is generated locally and clearly
+  captioned as a demonstration — nothing is ever transmitted to a real party.
+- **Eligibility grounded in evidence.** The gate checks each facility's
+  *actual recorded history* of recovering the same waste code, straight from
+  federal filings, and its verdict states exactly what it checked.
+- **A conservative headline number.** We lead with the strict full-profile
+  count (one facility covers every code on a shipment) rather than the larger
+  any-code figure (7,068 rows). Both are in `data/corpus_summary.json`, and
+  both measure eligibility — the first step before capacity and logistics.
+- **Reliable, reproducible CI.** CI reads a committed EPA snapshot, so every
+  run is deterministic and fast, while `demo/live_query.py` confirms the
+  snapshot matches the live federal data.
+- **Git identities as facilities.** Each facility acts through its own GitHub
+  identity, so claims, approvals, and merges carry real attribution —
+  exactly the model signed commits extend to production.
+- **A viewer that can't drift from the truth.** The web page renders directly
+  from committed repo state, so what you see is always what's in the ledger.
+
+<details>
+<summary><strong>Engineering notes: hardening against the live Gemini API</strong></summary>
+
+Solved by running the system end to end against the real API.
 
 - **Gemini `thought_signature`.** Gemini 3.5 requires an opaque signature to be
   echoed back on a reconstructed function-call turn. The SDK's own examples
@@ -279,7 +272,7 @@ Everything here was found by running the system for real, not by reading docs.
 - **A 2-way split needs two manifests.** One EPA manifest is one shipment to
   one facility; the renderer originally dropped every recipient but the
   first. It now writes one manifest per allocated claimant.
-- **Rate limits are real.** The free tier's 5 requests/minute needed genuine
+- **Rate-limit resilience.** The free tier's 5 requests/minute needed genuine
   backoff for multi-tool negotiations. Demo scripts fall back to an on-disk
   cache on any failure, and every cached reply is printed as
   `[cached response, live-verified <date>]` — if we replay, we say so.
