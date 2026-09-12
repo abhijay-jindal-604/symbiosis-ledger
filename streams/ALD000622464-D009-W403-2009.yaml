@@ -1,0 +1,16 @@
+stream_id: ALD000622464-D009-W403-2009
+generator:
+  handler_id: ALD000622464
+  handler_name: CHEMICAL WASTE MANGEMENT
+  location: EMELLE, AL
+waste:
+  federal_waste_codes: D009
+  form_code: W403
+  description: CURED 7850589 POLYURETHANE
+  available_tons: 48.0135
+  report_cycle: 2009
+current_disposition:
+  management_category: INCINERATION
+status: UNCLAIMED
+claims: []
+resolution: null

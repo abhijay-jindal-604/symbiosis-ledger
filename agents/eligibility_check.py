@@ -122,13 +122,17 @@ def main():
 
 def _find_stream_for_claimant(claimant):
     """Find which stream file to check `claimant` against, for the manual
-    `--claimant` CLI path. Prefers a stream where this claimant has actually
-    filed a claims: entry, but falls back to the one stream file present
-    when there's exactly one and no claim matched -- otherwise a claimant
-    whose claim was deliberately never merged (e.g. an ineligible receiver's
-    denial-evidence PR, left open on its own branch rather than landing on
-    main) can never be checked from main at all, breaking the single most
-    basic command a reader would try."""
+    `--claimant` CLI path. Only ever matches a stream where this claimant
+    has actually filed a claims: entry, with one narrow fallback: when
+    there's exactly one stream file total and no claim matched anywhere,
+    use it (a reasonable single-demo-stream default). This deliberately
+    does NOT try to guess among several streams when no claim matches --
+    a claimant whose claim was never merged into any stream on main (e.g.
+    recycler-d's denial-evidence PR, left open on its own branch) has no
+    stream this function can respond for once more than one exists, and the
+    caller must pass --stream explicitly instead. See
+    tests/test_eligibility_check.py for why a broader guess is worse than
+    returning None here."""
     import glob
     paths = glob.glob("streams/*.yaml")
     for path in paths:
