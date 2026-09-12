@@ -32,8 +32,8 @@ that never existed anywhere in the EPA dataset. `agents/negotiation_agent.py`
 prompt: the model runs a real tool-calling loop, able to call
 `lookup_receipt_history` to see each claimant's real EPA receipt history
 for itself rather than take eligibility on faith, `get_receiver_profile` to
-check that claimant's own memory (CONTEXT-DUMP §8) before repeating a
-settled decision, and `check_allocation` to self-verify its own proposed
+check that claimant's own memory (see "Memory and the recovery beat" below)
+before repeating a settled decision, and `check_allocation` to self-verify its own proposed
 split's arithmetic before committing to a final answer. Everything else
 (the CI gate, CODEOWNERS, the merge conflict itself) is real GitHub/git
 mechanics used honestly, not AI theater built on top of them.
@@ -138,6 +138,8 @@ discipline as the manifest's "NOT TRANSMITTED" banner.
 | **Blind two-call negotiation protocol** (`negotiate_blind()`, [PR #13](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/13)) | `agents/negotiation_agent.py`; real comparison run vs. the single-call protocol in `logs/negotiation-compare/ALD000622464-D009-W403-2009-20260912T115128Z-{single,blind}.json` |
 | **Web viewer** (read-only window onto all of the above) | `web/index.html` + committed `web/data.json`, built by `agents/export_viewer_data.py`; `python -m http.server` in `web/` to open it |
 | **Corpus-scale impact number** (8,004-row bulk pull, same eligibility rule) | `agents/corpus_scan.py`; cached pull in `data/corpus/`; committed result `data/corpus_summary.json`; `python agents/corpus_scan.py --offline` recomputes it with no network call |
+| **Planner agent** (ranks candidate receivers, replans on a genuine denial) | `agents/planner.py`; filmable two-invocation beat in `demo/run_planner.py` against `streams/AK9999999999-F003D009-W231-2026.yaml` — run 1 proposes and denies `recycler-d` before accepting the next-ranked candidate, run 2 (same repo state) excludes `recycler-d` from the ranking entirely, citing the recorded rejection date |
+| **Third demo stream** (Flint Hills Resources Alaska, North Pole — real EPA data, kept open as a live, judge-re-runnable conflict) | claim PRs [#18 kiln-b](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/18) (merged) / [#19 wwtp-c](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/19) (**deliberately left open**, same discipline as PR #3 — a real, unresolved merge conflict a judge can pull and re-run negotiation against, rather than one already spent on camera) |
 
 ## Memory and the recovery beat
 
@@ -336,8 +338,8 @@ overstate what produced a resolution:
 
 The demo above runs on 7 hand-picked `BR_REPORTING` rows — enough to show the
 mechanism, not enough to claim anything about the scale of the problem, and
-`00-BRIEF-ADDENDUM.md` separately flags that supply-chain material matching
-has no public ground truth. `agents/corpus_scan.py` is our own defensible
+supply-chain material matching has no public ground truth to check either
+number against. `agents/corpus_scan.py` is our own defensible
 validation of that claim: an **unfiltered bulk pull of 8,004 real
 `BR_REPORTING` rows** (never the `handler_id` path filter — see "Snapshot
 provenance" below for why), pulled 2026-09-12, run through the exact same,

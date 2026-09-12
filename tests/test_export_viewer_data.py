@@ -55,7 +55,7 @@ def test_every_exported_field_traces_to_a_source_artifact(monkeypatch):
         source_claims_by_claimant = {c["claimant"]: c for c in (source.get("claims") or [])}
         for claim in exported["claims"]:
             src = source_claims_by_claimant[claim["claimant"]]
-            assert claim["allocated_tons"] == src.get("allocated_tons")
+            assert claim.get("allocated_tons") == src.get("allocated_tons")
             assert claim["disclosed_constraint"] == src.get("disclosed_constraint")
 
         if source.get("resolution"):
