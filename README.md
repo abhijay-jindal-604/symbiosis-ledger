@@ -390,6 +390,22 @@ endpoint on every run. `demo/live_query.py` is the one live call in this
 repo, shown on camera, and it prints a MATCH/DIFFER verdict against this
 same snapshot so the "real data" claim is independently checkable.
 
+## Demo-path caching
+
+This build exhausted two separate Gemini free-tier daily quotas and hit the
+5-requests/minute rate limit during development — a real, already-hit risk,
+not a hypothetical one. `demo/live_query.py`'s EPA call and
+`demo/compare_negotiation_protocols.py`'s model calls (`agents/llm_gemini.py`'s
+`get_cached_llm_call()`) each try the live path first and fall back to an
+on-disk cache under `demo/cache/` on any failure — a dead network, a missing
+`GEMINI_API_KEY`, or a 429. A cached reply is always labeled on stdout as
+`[cached response, live-verified <date>]`, unprompted: if we replay, we say
+"replay". The live path is still the default whenever it works; the cache
+only covers the calls these two scripts actually make, confirmed by running
+both with `.env` removed and the network otherwise available — every call
+fell back to cache and was labeled, and both scripts still completed with
+the same result as the live run.
+
 ## Who built what
 
 Built by Abhijay Jindal (`abhijay-jindal-604`) and Bhaskar Kumar Arya

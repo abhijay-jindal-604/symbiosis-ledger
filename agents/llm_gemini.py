@@ -25,7 +25,10 @@ signature is threaded through the generic tool_call dict as an opaque
 extra field the rest of the codebase never inspects, and reattached here
 on reconstruction.
 """
+import base64
+import json
 import os
+from datetime import date
 
 MODEL_NAME = os.environ.get("NEGOTIATION_MODEL", "gemini-3.5-flash")
 
@@ -146,5 +149,119 @@ def get_llm_call():
         if tool_calls:
             return {"tool_calls": tool_calls}
         return {"text": response.text or ""}
+
+    return llm_call
+
+
+# --- demo-path caching (Phase 14) -----------------------------------------
+#
+# This build exhausted two separate Gemini free-tier daily quotas and hit
+# the 5-requests/minute rate limit during development; a quota exhaustion
+# mid-recording costs a take. get_cached_llm_call() wraps the real llm_call
+# with an on-disk, ordered-by-call-index cache: the first (live) run against
+# a given cache_path records every request/response pair, and any later run
+# -- including one with no GEMINI_API_KEY and no network at all -- replays
+# them in the same order. A replayed call is always labeled on stdout, per
+# the addendum's still-binding rule: if we replay, we say "replay",
+# unprompted. The live path stays the default whenever a key is present and
+# the call succeeds; the cache is a fallback, never the demo itself.
+
+def _encode_bytes_for_json(obj):
+    """Gemini's thought_signature (see the module docstring) is raw bytes,
+    which json.dump rejects outright -- confirmed live, the first time this
+    cache was populated for real. Recursively replaces any bytes value with
+    a tagged base64 string so the whole response tree stays JSON-safe."""
+    if isinstance(obj, bytes):
+        return {"__bytes_b64__": base64.b64encode(obj).decode("ascii")}
+    if isinstance(obj, dict):
+        return {k: _encode_bytes_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_encode_bytes_for_json(v) for v in obj]
+    return obj
+
+
+def _decode_bytes_from_json(obj):
+    if isinstance(obj, dict):
+        if set(obj.keys()) == {"__bytes_b64__"}:
+            return base64.b64decode(obj["__bytes_b64__"])
+        return {k: _decode_bytes_from_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_decode_bytes_from_json(v) for v in obj]
+    return obj
+
+
+def _load_cache(cache_path):
+    if os.path.exists(cache_path):
+        with open(cache_path) as f:
+            return _decode_bytes_from_json(json.load(f))
+    return {"verified_date": None, "responses": []}
+
+
+def _save_cache(cache_path, cache):
+    # Written atomically (temp file + os.replace): this is called after every
+    # single live call within a multi-call negotiation, so a process killed
+    # mid-write (e.g. a timeout during rehearsal) must not corrupt whatever
+    # calls were already safely cached.
+    os.makedirs(os.path.dirname(cache_path) or ".", exist_ok=True)
+    tmp_path = f"{cache_path}.tmp"
+    with open(tmp_path, "w") as f:
+        json.dump(_encode_bytes_for_json(cache), f, indent=2)
+    os.replace(tmp_path, cache_path)
+
+
+def get_cached_llm_call(cache_path):
+    """Returns an llm_call(messages, tools=None) -> dict closure identical in
+    shape to get_llm_call()'s, backed by a cache file at cache_path.
+
+    Call order within a run is deterministic (temperature=0, same prompts),
+    so calls are replayed strictly by position: the Nth call this run reads
+    the Nth cached response. If GEMINI_API_KEY is set, each call is attempted
+    live first and the cache is updated with the fresh response; if the key
+    is unset, or the live call raises, the cached response for that position
+    is used instead (and printed as such). Only raises if neither a live key
+    nor a cached response is available for that position.
+    """
+    cache = _load_cache(cache_path)
+    state = {"real_call": None}
+    call_index = {"n": 0}
+
+    def llm_call(messages, tools=None):
+        i = call_index["n"]
+        call_index["n"] += 1
+        responses = cache["responses"]
+        api_key = os.environ.get("GEMINI_API_KEY")
+
+        if api_key:
+            if state["real_call"] is None:
+                state["real_call"] = get_llm_call()
+            # The live call and the cache write are kept in separate
+            # try/except scopes on purpose: only a failure of the *live
+            # call itself* should fall back to a cached response labeled as
+            # such. A bug in the write path must surface as a real crash,
+            # never get silently swallowed into a false "cached" label on a
+            # response that was, in fact, live.
+            try:
+                response = state["real_call"](messages, tools)
+            except Exception as e:
+                if i < len(responses):
+                    print(f"[cached response, live-verified {cache['verified_date']}] "
+                          f"(live call failed: {e})")
+                    return responses[i]
+                raise
+            if i < len(responses):
+                responses[i] = response
+            else:
+                responses.append(response)
+            cache["verified_date"] = date.today().isoformat()
+            _save_cache(cache_path, cache)
+            return response
+
+        if i >= len(responses):
+            raise RuntimeError(
+                f"GEMINI_API_KEY is not set and call #{i} has no cached response in "
+                f"{cache_path}. Run once with a live key to populate the cache."
+            )
+        print(f"[cached response, live-verified {cache['verified_date']}]")
+        return responses[i]
 
     return llm_call
