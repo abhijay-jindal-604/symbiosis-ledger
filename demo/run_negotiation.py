@@ -9,6 +9,7 @@ so nothing here bypasses the on-camera gates).
 Usage: run from the repo root, on a clean tree, with GEMINI_API_KEY set
 (directly or via a gitignored .env in the repo root).
 """
+import argparse
 import os
 import subprocess
 import sys
@@ -17,9 +18,9 @@ from datetime import datetime, timezone
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "agents"))
 
-STREAM_PATH = "streams/AK8570028649-D009-W301-2001.yaml"
-BASE_BRANCH = "claim/kiln-b"
-OTHER_BRANCH = "claim/wwtp-c"
+DEFAULT_STREAM_PATH = "streams/AK8570028649-D009-W301-2001.yaml"
+DEFAULT_BASE_BRANCH = "claim/kiln-b"
+DEFAULT_OTHER_BRANCH = "claim/wwtp-c"
 
 
 def _load_env_file():
@@ -67,6 +68,16 @@ def _make_get_receiver_profile(receivers):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--stream", default=DEFAULT_STREAM_PATH,
+                         help="stream file path, as it appears on both claim branches")
+    parser.add_argument("--base-branch", default=DEFAULT_BASE_BRANCH,
+                         help="the claim branch that will carry the resolution commit and PR")
+    parser.add_argument("--other-branch", default=DEFAULT_OTHER_BRANCH,
+                         help="the other claim branch merged into --base-branch to produce the conflict")
+    args = parser.parse_args()
+    stream_path, base_branch, other_branch = args.stream, args.base_branch, args.other_branch
+
     _load_env_file()
     from stream_io import load_stream_str, write_stream
     from negotiation_agent import negotiate
@@ -80,11 +91,11 @@ def main():
         sys.exit(1)
 
     run(["git", "fetch", "origin"])
-    run(["git", "checkout", BASE_BRANCH])
-    run(["git", "pull", "--ff-only", "origin", BASE_BRANCH])
+    run(["git", "checkout", base_branch])
+    run(["git", "pull", "--ff-only", "origin", base_branch])
 
-    kiln_b_yaml = git_show(f"origin/{BASE_BRANCH}", STREAM_PATH)
-    wwtp_c_yaml = git_show(f"origin/{OTHER_BRANCH}", STREAM_PATH)
+    kiln_b_yaml = git_show(f"origin/{base_branch}", stream_path)
+    wwtp_c_yaml = git_show(f"origin/{other_branch}", stream_path)
     stream_a = load_stream_str(kiln_b_yaml)
     stream_b = load_stream_str(wwtp_c_yaml)
 
@@ -95,7 +106,7 @@ def main():
     print(f"Claimant B ({claim_b['claimant']}): {claim_b.get('disclosed_constraint')!r}, "
           f"requested {claim_b['requested_tons']}")
 
-    merge = subprocess.run(["git", "merge", "--no-commit", "--no-ff", f"origin/{OTHER_BRANCH}"],
+    merge = subprocess.run(["git", "merge", "--no-commit", "--no-ff", f"origin/{other_branch}"],
                             cwd=REPO_ROOT, text=True, capture_output=True)
     print(merge.stdout)
     print(merge.stderr)
@@ -144,9 +155,9 @@ def main():
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
-    write_stream(os.path.join(REPO_ROOT, STREAM_PATH), resolved)
+    write_stream(os.path.join(REPO_ROOT, stream_path), resolved)
 
-    run(["git", "add", STREAM_PATH, log_path])
+    run(["git", "add", stream_path, log_path])
     run(["git", "commit", "-m",
          f"Resolve {stream_id} conflict: {result['method'] or result['status']}\n\n"
          f"Negotiation agent read both branches' disclosed constraints and computed a "
@@ -155,10 +166,10 @@ def main():
     sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, check=True,
                           text=True, capture_output=True).stdout.strip()
     print(f"\nResolution commit: {sha}")
-    print(f"Now on branch {BASE_BRANCH}. Next steps (not automated by this script):")
-    print(f"  git push origin {BASE_BRANCH}")
+    print(f"Now on branch {base_branch}. Next steps (not automated by this script):")
+    print(f"  git push origin {base_branch}")
     print(f"  # wait for CI to go green, approve as the CODEOWNERS identity, merge via UI")
-    print(f"  # then close the {OTHER_BRANCH} PR pointing at {sha}")
+    print(f"  # then close the {other_branch} PR pointing at {sha}")
 
 
 if __name__ == "__main__":
