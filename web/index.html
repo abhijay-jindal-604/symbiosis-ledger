@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Symbiosis Ledger — repo viewer</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --text: #e6e8eb;
+    --muted: #8b929e; --accent: #5fb0ff; --ok: #4caf7d; --bad: #e05a5a;
+    --warn: #d9a441;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 24px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .banner {
+    background: #2a230f; border: 1px solid var(--warn); color: #f0d9a0;
+    padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 20px;
+  }
+  .stream {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px; margin-bottom: 20px;
+  }
+  .stream-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+  .stream-id { font-weight: 600; font-size: 16px; }
+  .status { font-size: 12px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); color: var(--muted); }
+  .status.RESOLVED_SPLIT, .status.RESOLVED { color: var(--ok); border-color: var(--ok); }
+  .status.RESOLVED_PARTIAL { color: var(--warn); border-color: var(--warn); }
+  .status.UNCLAIMED { color: var(--muted); }
+  .meta { color: var(--muted); font-size: 13px; margin: 6px 0 14px; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 16px 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  .pill { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 8px; }
+  .pill.ok { background: rgba(76,175,125,.15); color: var(--ok); }
+  .pill.bad { background: rgba(224,90,90,.15); color: var(--bad); }
+  .resolution { background: #11151c; border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-top: 6px; }
+  .resolution .expl { color: var(--text); font-size: 13px; margin-top: 6px; }
+  .feasible-true { color: var(--ok); }
+  .feasible-false { color: var(--bad); }
+  .plan-list { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+  .plan-list li { padding: 4px 0; border-bottom: 1px dashed var(--border); display: flex; justify-content: space-between; gap: 8px; }
+  .plan-list li:last-child { border-bottom: none; }
+  .skipped { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  details { margin-top: 6px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+  pre { background: #0b0d11; border: 1px solid var(--border); border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+  .links { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .links a { color: var(--accent); }
+  .receivers { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .receiver-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 13px; }
+  .receiver-card .name { font-weight: 600; }
+  .receiver-card .id { color: var(--muted); font-size: 12px; }
+  .error { color: var(--bad); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Symbiosis Ledger</h1>
+  <div class="subtitle">Read-only window onto committed repo state.</div>
+  <div id="banner" class="banner">
+    This page renders committed repo state. It is not a live system and transmits nothing.
+  </div>
+  <div id="content">Loading web/data.json…</div>
+</div>
+
+<script>
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+function claimsTable(claims) {
+  if (!claims || !claims.length) return '<div class="meta">No claims filed.</div>';
+  let rows = claims.map(c => `
+    <tr>
+      <td>${esc(c.claimant)}</td>
+      <td>${c.allocated_tons != null ? esc(c.allocated_tons) : "—"}</td>
+      <td>${esc(c.schedule || "—")}</td>
+      <td>${esc(c.disclosed_constraint || "—")}</td>
+      <td><span class="pill ${c.eligible ? "ok" : "bad"}">${c.eligible ? "ELIGIBLE" : "DENIED"}</span></td>
+    </tr>`).join("");
+  return `
+    <table>
+      <thead><tr><th>Claimant</th><th>Allocated</th><th>Schedule</th><th>Disclosed constraint</th><th>Eligibility</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <details><summary>eligibility verdicts (raw)</summary>
+      <pre>${claims.map(c => esc(c.claimant + ": " + c.eligibility_verdict)).join("\n")}</pre>
+    </details>`;
+}
+
+function resolutionBlock(resolution) {
+  if (!resolution) return '<div class="meta">Unresolved — no proposal has been accepted yet.</div>';
+  const feasCls = resolution.feasible ? "feasible-true" : "feasible-false";
+  return `
+    <div class="resolution">
+      <div><strong>method:</strong> ${esc(resolution.method)} &nbsp; <strong>resolved by:</strong> ${esc(resolution.resolved_by)}</div>
+      <div><strong>feasible:</strong> <span class="${feasCls}">${resolution.feasible}</span></div>
+      <div class="expl">${esc(resolution.explanation)}</div>
+      <div class="meta">timestamp: ${esc(resolution.timestamp)} · log: ${esc(resolution.log || "—")}</div>
+    </div>`;
+}
+
+function negotiationLogBlock(log) {
+  if (!log) return "";
+  return `<details><summary>raw negotiation log (prompt + model response)</summary>
+    <pre>${esc(JSON.stringify(log, null, 2))}</pre>
+  </details>`;
+}
+
+function planBlock(plan) {
+  if (!plan || !plan.candidates) return "";
+  const ranked = plan.candidates.map((c, i) => `
+    <li><span>#${i + 1} ${esc(c.candidate)}</span>
+    <span>receipts=${c.receipt_count} specificity=${c.specificity} tons=${c.total_tons_handled}</span></li>`).join("");
+  const skipped = (plan.skipped || []).length
+    ? `<div class="skipped">skipped (prior rejection on record): ${plan.skipped.map(s =>
+        esc(s.candidate + " — " + s.rejection.date)).join(", ")}</div>`
+    : "";
+  return `
+    <h3>Planner: ranked candidates (primary code ${esc(plan.primary_code || "—")})</h3>
+    <ul class="plan-list">${ranked || "<li>no candidates</li>"}</ul>
+    ${skipped}`;
+}
+
+function streamCard(s) {
+  return `
+    <div class="stream">
+      <div class="stream-head">
+        <div class="stream-id">${esc(s.stream_id)}</div>
+        <div class="status ${esc(s.status)}">${esc(s.status)}</div>
+      </div>
+      <div class="meta">
+        ${esc(s.generator.handler_name)} (${esc(s.generator.location)}) ·
+        ${esc(s.waste.available_tons)} tons of ${esc(s.waste.federal_waste_codes)},
+        form ${esc(s.waste.form_code)} — ${esc(s.waste.description)} ·
+        currently ${esc((s.current_disposition || {}).management_category || "—")}
+      </div>
+
+      <h3>Claims</h3>
+      ${claimsTable(s.claims)}
+
+      <h3>Resolution</h3>
+      ${resolutionBlock(s.resolution)}
+      ${negotiationLogBlock(s.negotiation_log)}
+
+      ${planBlock(s.plan)}
+
+      <div class="links">source: ${esc(s.source_file)}</div>
+    </div>`;
+}
+
+function receiverCard(alias, r) {
+  return `
+    <div class="receiver-card">
+      <div class="name">${esc(alias)}</div>
+      <div class="id">${esc(r.handler_id)} · ${esc(r.role_label || "")}</div>
+      <div class="meta" style="margin-top:6px">
+        accepted: ${r.accepted_streams.length} · rejected: ${r.rejected_claims.length}
+      </div>
+    </div>`;
+}
+
+async function main() {
+  const el = document.getElementById("content");
+  let data;
+  try {
+    const res = await fetch("data.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    data = await res.json();
+  } catch (e) {
+    el.innerHTML = `<div class="error">Could not load data.json: ${esc(e.message)}.
+      Run <code>python agents/export_viewer_data.py</code> then serve this
+      directory with <code>python -m http.server</code>.</div>`;
+    return;
+  }
+
+  const streamsHtml = data.streams.map(streamCard).join("");
+  const receiversHtml = Object.entries(data.receivers).map(([alias, r]) => receiverCard(alias, r)).join("");
+
+  el.innerHTML = `
+    <h3>Streams</h3>
+    ${streamsHtml}
+    <h3>Receivers</h3>
+    <div class="receivers">${receiversHtml}</div>`;
+}
+
+main();
+</script>
+</body>
+</html>

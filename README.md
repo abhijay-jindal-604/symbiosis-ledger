@@ -97,6 +97,31 @@ python demo/rerun_with_memory.py
 No API key is required for any of the three commands above. A key is only
 needed to re-run `agents/negotiation_agent.py` itself (see below).
 
+## The web viewer
+
+The entire state of this system — every stream, its competing claims, the
+resolved allocation, each claimant's eligibility verdict, and the planner's
+ranked plan — is otherwise only legible to someone willing to read YAML,
+JSON logs and git history. `web/index.html` makes it visible in one page:
+
+```bash
+python agents/export_viewer_data.py   # regenerates web/data.json (optional —
+                                       # a generated copy is already committed)
+cd web && python -m http.server
+# -> open http://localhost:8000, no network required, no backend, no build step
+```
+
+`web/data.json` is a committed, generated file (`git ls-files web/` shows
+it tracked, unlike `out/*`) so the page opens for a judge who never runs
+the exporter. Every field on the page traces to a real artifact already in
+this repo — `agents/export_viewer_data.py` reads `streams/*.yaml`,
+`data/receivers.json`, `receivers/profiles/*.json` and
+`logs/negotiation/*.json` and writes nothing else; it never calls
+`orchestrate.propose()`, so running it has no side effects on receiver
+memory. **This page renders committed repo state. It is not a live system
+and transmits nothing** — labeled as such on the page itself, same
+discipline as the manifest's "NOT TRANSMITTED" banner.
+
 ## Where to look in this repo
 
 | Artifact | Where |
@@ -111,6 +136,7 @@ needed to re-run `agents/negotiation_agent.py` itself (see below).
 | Receiver memory profiles | `receivers/profiles/<receiver_id>.json`, written by `agents/orchestrate.py` |
 | **Second demo stream** (real EPA data, resolved by the tool-calling agent) | claim PRs [#9 kiln-b](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/9) / [#10 wwtp-c](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/10); resolution commit `3c0c9a1`; log `logs/negotiation/ALD000622464-D009-W403-2009-20260912T095400Z.json`; manifests `out/manifest-ALD000622464-D009-W403-2009-kiln-b.html` and `...-wwtp-c.html` (two files: a genuine 2-way split needs two shipments) |
 | **Blind two-call negotiation protocol** (`negotiate_blind()`, [PR #13](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/13)) | `agents/negotiation_agent.py`; real comparison run vs. the single-call protocol in `logs/negotiation-compare/ALD000622464-D009-W403-2009-20260912T115128Z-{single,blind}.json` |
+| **Web viewer** (read-only window onto all of the above) | `web/index.html` + committed `web/data.json`, built by `agents/export_viewer_data.py`; `python -m http.server` in `web/` to open it |
 
 ## Memory and the recovery beat
 
