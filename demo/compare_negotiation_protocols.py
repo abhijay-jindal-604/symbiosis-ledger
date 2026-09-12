@@ -84,7 +84,7 @@ def main():
     _load_env_file()
     from stream_io import load_stream_str
     from negotiation_agent import negotiate, negotiate_blind
-    from llm_gemini import get_llm_call
+    from llm_gemini import get_cached_llm_call
     from eligibility_check import load_receivers, load_snapshot, CODE_RE
 
     stream_path, ref_a, ref_b = STREAMS[args.stream_id]
@@ -109,7 +109,15 @@ def main():
     out_dir = os.path.join(REPO_ROOT, "logs", "negotiation-compare")
     os.makedirs(out_dir, exist_ok=True)
 
-    llm_call = get_llm_call()
+    # Phase 14 demo-path caching: this is the one script that calls the model
+    # live purely for demonstration (the actual CODEOWNERS-approved
+    # resolutions were already made and committed by demo/run_negotiation.py
+    # in an earlier session) and is the one most likely to be re-run during
+    # rehearsal and recording, so it's the negotiation call worth caching.
+    # A cache-miss on the first call requires GEMINI_API_KEY; after that,
+    # this script completes with no key and no network at all.
+    cache_path = os.path.join(REPO_ROOT, "demo", "cache", f"negotiation-compare-{args.stream_id}.json")
+    llm_call = get_cached_llm_call(cache_path)
 
     print("\n=== negotiate() -- single call, sees both sides at once ===")
     single_log = os.path.join(out_dir, f"{args.stream_id}-{ts}-single.json")

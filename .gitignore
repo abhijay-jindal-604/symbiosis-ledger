@@ -1,6 +1,7 @@
 .env
 out/*
 !out/manifest-*.html
+!out/eval_report.json
 .venv/
 __pycache__/
 *.pyc

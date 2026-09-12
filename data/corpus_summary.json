@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "source": "https://data.epa.gov/efservice/BR_REPORTING/rows/0:8000/JSON",
+    "pull_date": "2026-09-12",
+    "sample_size": 8004
+  },
+  "rows_scanned": 8004,
+  "disposal_bound_dcode_rows": 7099,
+  "divertible_rows_any_code": 7068,
+  "divertible_tons_any_code": 14009.5843,
+  "divertible_rows_full_profile": 6839,
+  "divertible_tons_full_profile": 13851.6782,
+  "total_disposal_bound_dcode_tons": 14039.4113,
+  "distinct_recovery_receivers_seen": 22,
+  "limits": [
+    "This is a sample of the BR_REPORTING table pulled on one date, not the whole table.",
+    "BR_REPORTING is an annual filing, typically 12-18 months lagged at publication.",
+    "'divertible_rows_any_code' reuses eligibility_check.py's own per-claimant rule verbatim (a receiver is eligible if its recovery history overlaps the claimed waste code set by even one shared code) -- but at corpus scale that rule is generous: a compound multi-code row needs only one of its several codes to match some receiver somewhere in the sample, so this number is an upper bound, not the headline claim.",
+    "'divertible_rows_full_profile' is the headline number: it additionally requires a SINGLE receiver whose own recovery history covers every one of the row's waste codes -- one real facility that could plausibly take the whole shipment, not a code matched by a different receiver for each. This is stricter than the CI eligibility check (which only ever evaluates one claimant against one stream's codes, so the distinction doesn't arise there) and is the number this repo puts on screen.",
+    "Eligibility here is necessary, not sufficient, for the row's waste to actually be diverted: no permit, capacity, logistics, or cost check is performed."
+  ]
+}

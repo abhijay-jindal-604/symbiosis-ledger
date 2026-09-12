@@ -1,0 +1,313 @@
+{
+  "streams": [
+    {
+      "stream_id": "AK8570028649-D009-W301-2001",
+      "generator": {
+        "handler_id": "AK8570028649",
+        "handler_name": "USAF ELMENDORF AFB",
+        "location": "ELMENDORF AFB, AK"
+      },
+      "waste": {
+        "federal_waste_codes": "D004D005D006D007D008D009",
+        "form_code": "W301",
+        "description": "SOIL",
+        "available_tons": 24.1325,
+        "report_cycle": 2001
+      },
+      "current_disposition": {
+        "management_category": "LANDFILL"
+      },
+      "status": "RESOLVED_PARTIAL",
+      "claims": [
+        {
+          "claimant": "kiln-b",
+          "allocated_tons": 0.0,
+          "schedule": "No allocation due to unresolvable shortfall",
+          "disclosed_constraint": "needs 15 t/week continuous; can begin immediately",
+          "eligible": true,
+          "eligibility_verdict": "ELIGIBLE \u2014 receiver IND000646943 has 4 recorded receipt(s) of waste code D004,D005,D006,D007,D008,D009 under a recovery-type method (METALS RECOVERY), by waste code"
+        },
+        {
+          "claimant": "wwtp-c",
+          "allocated_tons": 24.1325,
+          "schedule": "Deliver full 24.1325 tons during Tuesday and Thursday intake windows",
+          "disclosed_constraint": "can accept full 24.1325t but only Tue/Thu intake windows",
+          "eligible": true,
+          "eligibility_verdict": "ELIGIBLE \u2014 receiver WAD020257945 has 1 recorded receipt(s) of waste code D004,D005,D006,D007,D008,D009 under a recovery-type method (METALS RECOVERY), by waste code"
+        }
+      ],
+      "resolution": {
+        "method": "negotiated_partial",
+        "resolved_by": "negotiation_agent_v1",
+        "feasible": false,
+        "explanation": "A satisfying split does not exist because kiln-b requires a continuous supply of 15 tons per week which cannot be sustained by a one-time batch of 24.1325 tons.",
+        "log": "logs/negotiation/AK8570028649-D009-W301-2001-20260912T081951Z.json",
+        "timestamp": "2026-09-12T08:19:54.367096+00:00"
+      },
+      "negotiation_log": {
+        "stream_id": "AK8570028649-D009-W301-2001",
+        "model": "gemini-3.5-flash",
+        "temperature": 0,
+        "attempts": [
+          {
+            "n": 1,
+            "prompt": "You are resolving a conflict between two facilities that both want the same industrial byproduct stream.\n\nStream: AK8570028649-D009-W301-2001\nAvailable: 24.1325 tons of waste code D004D005D006D007D008D009 (form W301)\n\nClaimant A: kiln-b\n  Requested: 24.1325 tons\n  Disclosed constraint: \"needs 15 t/week continuous; can begin immediately\"\n\nClaimant B: wwtp-c\n  Requested: 24.1325 tons\n  Disclosed constraint: \"can accept full 24.1325t but only Tue/Thu intake windows\"\n\nPropose a split allocation (tons and scheduling terms for each claimant) that satisfies both\ndisclosed constraints if a satisfying split exists. If no split satisfies both fully, say so\nand propose the largest feasible allocation to each within their own stated constraint,\nexplaining the shortfall in one sentence.\n\nRules you must follow:\n- Include exactly one entry per claimant, using the claimant names exactly as given above.\n- \"tons\" must be a bare number (no units, no ranges, no strings), >= 0.\n- The tons across all entries must sum to at most 24.1325.\n- If a disclosed constraint is empty, vague, or states no quantity or schedule you can act on,\n  do NOT invent a number for it: set \"feasible\" to false and name that constraint in the\n  explanation as the reason.\n- Output the JSON object and nothing else: no prose, no markdown code fences, no commentary.\n\nReturn strict JSON only:\n{\"feasible\": true|false, \"allocation\": [{\"claimant\": \"...\", \"tons\": N, \"schedule\": \"...\"}], \"explanation\": \"...\"}",
+            "raw_response": "{\"feasible\": false, \"allocation\": [{\"claimant\": \"kiln-b\", \"tons\": 0, \"schedule\": \"No allocation due to unresolvable shortfall\"}, {\"claimant\": \"wwtp-c\", \"tons\": 24.1325, \"schedule\": \"Deliver full 24.1325 tons during Tuesday and Thursday intake windows\"}], \"explanation\": \"A satisfying split does not exist because kiln-b requires a continuous supply of 15 tons per week which cannot be sustained by a one-time batch of 24.1325 tons.\"}",
+            "outcome": "accepted",
+            "reason": null
+          }
+        ],
+        "path_taken": "primary",
+        "final_status": "RESOLVED_PARTIAL"
+      },
+      "plan": {
+        "stream_id": "AK8570028649-D009-W301-2001",
+        "primary_code": "D004",
+        "candidates": [
+          {
+            "candidate": "kiln-b",
+            "receiver_id": "IND000646943",
+            "receipt_count": 0,
+            "specificity": 1,
+            "total_tons_handled": 0.004
+          },
+          {
+            "candidate": "wwtp-c",
+            "receiver_id": "WAD020257945",
+            "receipt_count": 0,
+            "specificity": 0,
+            "total_tons_handled": 0.008
+          }
+        ],
+        "skipped": [
+          {
+            "candidate": "recycler-d",
+            "rejection": {
+              "stream_id": "AK8570028649-D009-W301-2001",
+              "reason": "ELIGIBILITY DENIED \u2014 receiver NED981723513 has 0 recorded receipts of waste code D004,D005,D006,D007,D008,D009 under a recovery-type method (report cycle n/a)",
+              "date": "2026-09-12T08:41:03.363606+00:00"
+            }
+          }
+        ]
+      },
+      "source_file": "streams/AK8570028649-D009-W301-2001.yaml"
+    },
+    {
+      "stream_id": "AK9999999999-F003D009-W231-2026",
+      "generator": {
+        "handler_id": "AK9999999999",
+        "handler_name": "DEMO GENERATOR (PLANNER WALKTHROUGH)",
+        "location": "ANCHORAGE, AK"
+      },
+      "waste": {
+        "federal_waste_codes": "F003D009",
+        "form_code": "W231",
+        "description": "MIXED SPENT SOLVENT AND MERCURY-CONTAMINATED DEBRIS (synthetic stream for demo/run_planner.py)",
+        "available_tons": 12.5,
+        "report_cycle": 2026
+      },
+      "current_disposition": {
+        "management_category": "LANDFILL"
+      },
+      "status": "UNCLAIMED",
+      "claims": [],
+      "resolution": null,
+      "negotiation_log": null,
+      "plan": {
+        "stream_id": "AK9999999999-F003D009-W231-2026",
+        "primary_code": "F003",
+        "candidates": [
+          {
+            "candidate": "recycler-d",
+            "receiver_id": "NED981723513",
+            "receipt_count": 0,
+            "specificity": 1,
+            "total_tons_handled": 0
+          },
+          {
+            "candidate": "wwtp-c",
+            "receiver_id": "WAD020257945",
+            "receipt_count": 0,
+            "specificity": 0,
+            "total_tons_handled": 0.008
+          },
+          {
+            "candidate": "kiln-b",
+            "receiver_id": "IND000646943",
+            "receipt_count": 0,
+            "specificity": 0,
+            "total_tons_handled": 0.004
+          }
+        ],
+        "skipped": []
+      },
+      "source_file": "streams/AK9999999999-F003D009-W231-2026.yaml"
+    },
+    {
+      "stream_id": "ALD000622464-D009-W403-2009",
+      "generator": {
+        "handler_id": "ALD000622464",
+        "handler_name": "CHEMICAL WASTE MANGEMENT",
+        "location": "EMELLE, AL"
+      },
+      "waste": {
+        "federal_waste_codes": "D009",
+        "form_code": "W403",
+        "description": "CURED 7850589 POLYURETHANE",
+        "available_tons": 48.0135,
+        "report_cycle": 2009
+      },
+      "current_disposition": {
+        "management_category": "INCINERATION"
+      },
+      "status": "RESOLVED_SPLIT",
+      "claims": [
+        {
+          "claimant": "kiln-b",
+          "allocated_tons": 20.0,
+          "schedule": "one-time delivery",
+          "disclosed_constraint": "can take up to 20 tons as a one-time delivery; no scheduling constraint",
+          "eligible": true,
+          "eligibility_verdict": "ELIGIBLE \u2014 receiver IND000646943 has 4 recorded receipt(s) of waste code D009 under a recovery-type method (METALS RECOVERY), by waste code"
+        },
+        {
+          "claimant": "wwtp-c",
+          "allocated_tons": 28.0135,
+          "schedule": "one-time delivery",
+          "disclosed_constraint": "can accept any quantity as a one-time delivery, no scheduling constraint, but needs at least 25 tons to justify the pickup logistically",
+          "eligible": true,
+          "eligibility_verdict": "ELIGIBLE \u2014 receiver WAD020257945 has 1 recorded receipt(s) of waste code D009 under a recovery-type method (METALS RECOVERY), by waste code"
+        }
+      ],
+      "resolution": {
+        "method": "negotiated_split",
+        "resolved_by": "negotiation_agent_v1",
+        "feasible": true,
+        "explanation": "The total available stream of 48.0135 tons is split to satisfy both constraints: kiln-b receives its maximum capacity of 20 tons as a one-time delivery, and wwtp-c receives the remaining 28.0135 tons, which exceeds its logistical minimum threshold of 25 tons.",
+        "log": "logs/negotiation/ALD000622464-D009-W403-2009-20260912T095400Z.json",
+        "timestamp": "2026-09-12T09:54:09.578570+00:00"
+      },
+      "negotiation_log": {
+        "stream_id": "ALD000622464-D009-W403-2009",
+        "model": "gemini-3.5-flash",
+        "temperature": 0,
+        "attempts": [
+          {
+            "n": 1,
+            "prompt": "You are resolving a conflict between two facilities that both want the same industrial byproduct stream.\n\nStream: ALD000622464-D009-W403-2009\nAvailable: 48.0135 tons of waste code D009 (form W403)\n\nClaimant A: kiln-b\n  Requested: 48.0135 tons\n  Disclosed constraint: \"can take up to 20 tons as a one-time delivery; no scheduling constraint\"\n\nClaimant B: wwtp-c\n  Requested: 48.0135 tons\n  Disclosed constraint: \"can accept any quantity as a one-time delivery, no scheduling constraint, but needs at least 25 tons to justify the pickup logistically\"\n\nYou have three tools available:\n- lookup_receipt_history(claimant): see the real recorded receipt history behind that claimant's\n  eligibility, rather than taking eligibility on faith.\n- get_receiver_profile(claimant): see a claimant's own prior acceptances/rejections in this system,\n  so you don't repeat a decision this system already settled.\n- check_allocation(allocation): verify a candidate split is arithmetically valid (no negative tons,\n  total <= available) BEFORE you commit to it as your final answer, so you catch your own mistake\n  instead of being rejected and having to retry.\n\nUse any of these tools if they would help, in any order, as many times as you need -- or none at\nall if you don't need them. When you are ready, propose a split allocation (tons and scheduling\nterms for each claimant) that satisfies both disclosed constraints if a satisfying split exists.\nIf no split satisfies both fully, say so and propose the largest feasible allocation to each\nwithin their own stated constraint, explaining the shortfall in one sentence.\n\nRules for your final answer:\n- Include exactly one entry per claimant, using the claimant names exactly as given above.\n- \"tons\" must be a bare number (no units, no ranges, no strings), >= 0.\n- The tons across all entries must sum to at most 48.0135.\n- If a disclosed constraint is empty, vague, or states no quantity or schedule you can act on,\n  do NOT invent a number for it: set \"feasible\" to false and name that constraint in the\n  explanation as the reason.\n- Once you are done calling tools, your final response must be the JSON object and nothing else:\n  no prose, no markdown code fences, no commentary, no further tool calls.\n\nFinal answer format, strict JSON only:\n{\"feasible\": true|false, \"allocation\": [{\"claimant\": \"...\", \"tons\": N, \"schedule\": \"...\"}], \"explanation\": \"...\"}",
+            "raw_response": "{\"feasible\": true, \"allocation\": [{\"claimant\": \"kiln-b\", \"tons\": 20, \"schedule\": \"one-time delivery\"}, {\"claimant\": \"wwtp-c\", \"tons\": 28.0135, \"schedule\": \"one-time delivery\"}], \"explanation\": \"The total available stream of 48.0135 tons is split to satisfy both constraints: kiln-b receives its maximum capacity of 20 tons as a one-time delivery, and wwtp-c receives the remaining 28.0135 tons, which exceeds its logistical minimum threshold of 25 tons.\"}",
+            "outcome": "accepted",
+            "reason": null,
+            "tool_calls": [
+              {
+                "name": "get_receiver_profile",
+                "arguments": {
+                  "claimant": "kiln-b"
+                },
+                "result": {
+                  "receiver_id": "IND000646943",
+                  "accepted_streams": [],
+                  "rejected_claims": []
+                }
+              },
+              {
+                "name": "get_receiver_profile",
+                "arguments": {
+                  "claimant": "wwtp-c"
+                },
+                "result": {
+                  "receiver_id": "WAD020257945",
+                  "accepted_streams": [],
+                  "rejected_claims": []
+                }
+              },
+              {
+                "name": "check_allocation",
+                "arguments": {
+                  "allocation": [
+                    {
+                      "tons": 20,
+                      "claimant": "kiln-b"
+                    },
+                    {
+                      "claimant": "wwtp-c",
+                      "tons": 28.0135
+                    }
+                  ]
+                },
+                "result": {
+                  "ok": true,
+                  "message": "allocation sums to 48.0135, within available 48.0135"
+                }
+              }
+            ]
+          }
+        ],
+        "path_taken": "primary",
+        "final_status": "RESOLVED_SPLIT"
+      },
+      "plan": {
+        "stream_id": "ALD000622464-D009-W403-2009",
+        "primary_code": "D009",
+        "candidates": [
+          {
+            "candidate": "kiln-b",
+            "receiver_id": "IND000646943",
+            "receipt_count": 4,
+            "specificity": 1,
+            "total_tons_handled": 0.004
+          },
+          {
+            "candidate": "wwtp-c",
+            "receiver_id": "WAD020257945",
+            "receipt_count": 1,
+            "specificity": 0,
+            "total_tons_handled": 0.008
+          },
+          {
+            "candidate": "recycler-d",
+            "receiver_id": "NED981723513",
+            "receipt_count": 0,
+            "specificity": 0,
+            "total_tons_handled": 0
+          }
+        ],
+        "skipped": []
+      },
+      "source_file": "streams/ALD000622464-D009-W403-2009.yaml"
+    }
+  ],
+  "receivers": {
+    "kiln-b": {
+      "handler_id": "IND000646943",
+      "display_name": "POLLUTION CONTROL INDUSTRIES INC",
+      "role_label": "metals recovery facility",
+      "expected_eligibility": "ELIGIBLE",
+      "accepted_streams": [],
+      "rejected_claims": []
+    },
+    "wwtp-c": {
+      "handler_id": "WAD020257945",
+      "display_name": "BURLINGTON ENVIRONMENTAL LLC TACOMA",
+      "role_label": "environmental treatment facility",
+      "expected_eligibility": "ELIGIBLE",
+      "accepted_streams": [],
+      "rejected_claims": []
+    },
+    "recycler-d": {
+      "handler_id": "NED981723513",
+      "display_name": "CLEAN HARBORS ENVIRONMENTAL SERVICES INC",
+      "role_label": "solvent recycler",
+      "expected_eligibility": "DENIED",
+      "accepted_streams": [],
+      "rejected_claims": [
+        {
+          "stream_id": "AK8570028649-D009-W301-2001",
+          "reason": "ELIGIBILITY DENIED \u2014 receiver NED981723513 has 0 recorded receipts of waste code D004,D005,D006,D007,D008,D009 under a recovery-type method (report cycle n/a)",
+          "date": "2026-09-12T08:41:03.363606+00:00"
+        }
+      ]
+    }
+  },
+  "disclaimer": "This page renders committed repo state as of export time. It is not a live system and transmits nothing."
+}
