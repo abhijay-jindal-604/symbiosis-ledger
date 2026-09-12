@@ -1,0 +1,17 @@
+name: eligibility-check
+on:
+  pull_request:          # deliberately NO paths: filter — a required check that
+                          # never triggers leaves non-stream PRs unmergeable forever
+jobs:
+  eligibility:            # <- this key is the check name; do not rename it later
+    name: eligibility      # <- pin it explicitly so the rendered name can't drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # script compares against main; a shallow clone has no main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python agents/eligibility_check.py

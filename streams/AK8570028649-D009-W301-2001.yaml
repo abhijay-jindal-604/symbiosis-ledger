@@ -1,0 +1,16 @@
+stream_id: AK8570028649-D009-W301-2001
+generator:
+  handler_id: AK8570028649
+  handler_name: USAF ELMENDORF AFB
+  location: ELMENDORF AFB, AK
+waste:
+  federal_waste_codes: D004D005D006D007D008D009
+  form_code: W301
+  description: SOIL
+  available_tons: 24.1325
+  report_cycle: 2001
+current_disposition:
+  management_category: LANDFILL
+status: UNCLAIMED
+claims: []
+resolution: null

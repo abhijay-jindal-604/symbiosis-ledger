@@ -1,0 +1,39 @@
+{
+  "federal_waste_codes": {
+    "D001": "Ignitability",
+    "D002": "Corrosivity",
+    "D004": "Arsenic (toxicity characteristic)",
+    "D005": "Barium (toxicity characteristic)",
+    "D006": "Cadmium (toxicity characteristic)",
+    "D007": "Chromium (toxicity characteristic)",
+    "D008": "Lead (toxicity characteristic)",
+    "D009": "Mercury (toxicity characteristic)",
+    "D010": "Selenium (toxicity characteristic)",
+    "U151": "Mercury (listed waste, spent/discarded commercial chemical product)"
+  },
+  "form_codes": {
+    "W002": "Inorganic solid waste (metal-bearing sludges, dusts, etc.)",
+    "W103": "Aqueous acidic solution",
+    "W107": "Aqueous waste with reactive/toxic contaminants",
+    "W113": "Aqueous solution with toxic organics",
+    "W117": "Aqueous solution with metal-bearing sludge or fine particulate",
+    "W209": "Inorganic solid debris",
+    "W219": "Spent antifreeze",
+    "W301": "Contaminated soil/debris",
+    "W320": "Other inorganic solid waste"
+  },
+  "management_method_codes": {
+    "H010": "Metals recovery",
+    "H011": "Metals recovery (alternate reporting code)",
+    "H020": "Solvents recovery",
+    "H040": "Neutralization/other treatment",
+    "H132": "Landfill",
+    "H141": "Chemical/physical treatment"
+  },
+  "management_category_vocabulary": {
+    "recovery_type": ["METALS RECOVERY", "OTHER RECOVERY", "SOLVENTS RECOVERY"],
+    "disposal_type": ["LANDFILL", "INCINERATION", "LAND TREATMENT / APPLICATION"],
+    "neither": ["WASTEWATER TREATMENT", "SLUDGE TRTMNT / STAB / ENCAP", "FUEL BLENDING"]
+  },
+  "source": "EPA Biennial Report Instructions and Form (public), https://www.epa.gov/hwgenerators/uniform-hazardous-waste-manifest-instructions-sample-form-and-instructions-how-obtain"
+}

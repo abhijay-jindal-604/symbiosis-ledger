@@ -1,0 +1,6 @@
+.env
+out/
+!out/manifest-*.html
+.venv/
+__pycache__/
+*.pyc

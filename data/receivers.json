@@ -1,0 +1,26 @@
+{
+  "kiln-b": {
+    "handler_id": "IND000646943",
+    "display_name": "POLLUTION CONTROL INDUSTRIES INC",
+    "role_label": "metals recovery facility",
+    "github_identity": "@kiln-b-bot",
+    "expected_eligibility": "ELIGIBLE",
+    "snapshot_rows": 4
+  },
+  "wwtp-c": {
+    "handler_id": "WAD020257945",
+    "display_name": "BURLINGTON ENVIRONMENTAL LLC TACOMA",
+    "role_label": "environmental treatment facility",
+    "github_identity": "@wwtp-c-bot",
+    "expected_eligibility": "ELIGIBLE",
+    "snapshot_rows": 1
+  },
+  "recycler-d": {
+    "handler_id": "NED981723513",
+    "display_name": "CLEAN HARBORS ENVIRONMENTAL SERVICES INC",
+    "role_label": "solvent recycler",
+    "github_identity": "@recycler-d-bot",
+    "expected_eligibility": "DENIED",
+    "snapshot_rows": 0
+  }
+}
