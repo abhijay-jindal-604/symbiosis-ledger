@@ -11,6 +11,9 @@ waste:
   report_cycle: 2001
 current_disposition:
   management_category: LANDFILL
-status: UNCLAIMED
-claims: []
+status: CLAIMED_BY_recycler-d
+claims:
+- claimant: recycler-d
+  requested_tons: 24.1325
+  disclosed_constraint: can accept full load, no scheduling restriction
 resolution: null
