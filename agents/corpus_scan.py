@@ -39,11 +39,21 @@ D_CODE_RE = re.compile(r"D\d{3}")
 LIMITS = [
     "This is a sample of the BR_REPORTING table pulled on one date, not the whole table.",
     "BR_REPORTING is an annual filing, typically 12-18 months lagged at publication.",
-    "Eligibility here means 'a receiver in this same sample has recorded recovery-type "
-    "receipt history for this exact federal waste code' -- necessary, not sufficient, "
-    "for the row's waste to actually be diverted.",
-    "'Divertible' means 'passes this gate', not 'will be diverted' -- no permit, capacity, "
-    "logistics, or cost check is performed.",
+    "'divertible_rows_any_code' reuses eligibility_check.py's own per-claimant rule "
+    "verbatim (a receiver is eligible if its recovery history overlaps the claimed "
+    "waste code set by even one shared code) -- but at corpus scale that rule is "
+    "generous: a compound multi-code row needs only one of its several codes to "
+    "match some receiver somewhere in the sample, so this number is an upper bound, "
+    "not the headline claim.",
+    "'divertible_rows_full_profile' is the headline number: it additionally requires "
+    "a SINGLE receiver whose own recovery history covers every one of the row's "
+    "waste codes -- one real facility that could plausibly take the whole shipment, "
+    "not a code matched by a different receiver for each. This is stricter than the "
+    "CI eligibility check (which only ever evaluates one claimant against one stream's "
+    "codes, so the distinction doesn't arise there) and is the number this repo puts "
+    "on screen.",
+    "Eligibility here is necessary, not sufficient, for the row's waste to actually "
+    "be diverted: no permit, capacity, logistics, or cost check is performed.",
 ]
 
 
@@ -105,17 +115,30 @@ def row_tons(row):
 
 def compute_summary(rows, meta):
     """Apply the existing eligibility rule (recovery-type management_category +
-    exact shared federal waste code) across `rows`, corpus-wide: a disposal-bound
-    D-code row is divertible if *any* row in the same corpus shows a receiver with
-    a recovery-type receipt for that exact code."""
-    recovery_codes_to_receivers = {}
+    shared federal waste code) across `rows`, corpus-wide, and report two numbers:
+
+    - `divertible_rows_any_code`: eligibility_check.py's own per-claimant rule,
+      unforked -- a row is divertible if *any* receiver anywhere in the sample
+      has a recovery-type receipt for *any one* of the row's codes. This is an
+      upper bound: a compound multi-code row only needs one of its several
+      codes to match somewhere, so it is generous at corpus scale.
+    - `divertible_rows_full_profile`: the headline number -- a row is divertible
+      only if a SINGLE receiver's recovery history covers *every* one of the
+      row's codes (one real facility that could plausibly take the whole
+      shipment, not a different receiver per code).
+    """
+    receiver_codes = {}
     for row in rows:
         if row.get("management_category") not in RECOVERY_CATEGORIES:
             continue
         receiver_id = row.get("receiver_id")
         if not receiver_id:
             continue
-        for code in d_codes(row):
+        receiver_codes.setdefault(receiver_id, set()).update(d_codes(row))
+
+    recovery_codes_to_receivers = {}
+    for receiver_id, codes in receiver_codes.items():
+        for code in codes:
             recovery_codes_to_receivers.setdefault(code, set()).add(receiver_id)
 
     disposal_bound = []
@@ -126,15 +149,18 @@ def compute_summary(rows, meta):
         if codes:
             disposal_bound.append((row, codes))
 
-    divertible_rows = []
-    divertible_tons = 0.0
+    any_code_rows, any_code_tons = [], 0.0
+    full_profile_rows, full_profile_tons = [], 0.0
     for row, codes in disposal_bound:
         matching_receivers = set()
         for code in codes:
             matching_receivers |= recovery_codes_to_receivers.get(code, set())
         if matching_receivers:
-            divertible_rows.append(row)
-            divertible_tons += row_tons(row)
+            any_code_rows.append(row)
+            any_code_tons += row_tons(row)
+        if any(codes <= receiver_codes[r] for r in matching_receivers):
+            full_profile_rows.append(row)
+            full_profile_tons += row_tons(row)
 
     total_disposal_tons = sum(row_tons(row) for row, _ in disposal_bound)
 
@@ -142,10 +168,12 @@ def compute_summary(rows, meta):
         "meta": meta,
         "rows_scanned": len(rows),
         "disposal_bound_dcode_rows": len(disposal_bound),
-        "divertible_rows": len(divertible_rows),
-        "divertible_tons": round(divertible_tons, 4),
+        "divertible_rows_any_code": len(any_code_rows),
+        "divertible_tons_any_code": round(any_code_tons, 4),
+        "divertible_rows_full_profile": len(full_profile_rows),
+        "divertible_tons_full_profile": round(full_profile_tons, 4),
         "total_disposal_bound_dcode_tons": round(total_disposal_tons, 4),
-        "distinct_recovery_receivers_seen": len({r for rs in recovery_codes_to_receivers.values() for r in rs}),
+        "distinct_recovery_receivers_seen": len(receiver_codes),
         "limits": LIMITS,
     }
 
@@ -153,8 +181,10 @@ def compute_summary(rows, meta):
 def print_report(summary):
     print(f"Rows scanned:                       {summary['rows_scanned']}")
     print(f"Disposal-bound rows carrying D-codes: {summary['disposal_bound_dcode_rows']}")
-    print(f"  of which divertible (gate passes):  {summary['divertible_rows']}")
-    print(f"  divertible tons:                    {summary['divertible_tons']}")
+    print(f"  divertible, any shared code (upper bound): {summary['divertible_rows_any_code']} rows, "
+          f"{summary['divertible_tons_any_code']} tons")
+    print(f"  divertible, one receiver covers full profile (headline): "
+          f"{summary['divertible_rows_full_profile']} rows, {summary['divertible_tons_full_profile']} tons")
     print(f"  (of {summary['total_disposal_bound_dcode_tons']} total disposal-bound D-code tons)")
     print(f"Distinct recovery-type receivers seen: {summary['distinct_recovery_receivers_seen']}")
     print(f"Pull date: {summary['meta']['pull_date']}   Sample size: {summary['meta']['sample_size']}")

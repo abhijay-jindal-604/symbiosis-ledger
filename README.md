@@ -350,32 +350,49 @@ python agents/corpus_scan.py --offline
 #    data/corpus/, no network call, no API key
 ```
 
-**The number:** of 7,099 disposal-bound rows in the sample carrying a federal
-D-code, 7,068 (99.6%) have at least one receiver *in the same sample* with
-real recovery-type receipt history for that exact D-code — representing
-**14,009.6 tons** currently reported as disposal that this gate would call
-divertible, out of 14,039.4 disposal-bound D-code tons in the sample. Only
-20 distinct receivers in the sample carry recovery-type history at all; the
-high match rate is real and traces to the fact that the D-codes actually
-occurring in this sample cluster heavily around the common characteristic
-codes (ignitability `D001`, corrosivity `D002`, metals `D004`-`D011`) that
-those 20 receivers already cover — 19 rarer D-codes in the sample (`D012`,
-`D013`, `D016`, ...) have no matching recovery receiver at all and are
-correctly excluded. `data/corpus/` holds the raw cached pages so the exact
-number above is reproducible offline; `tests/test_corpus_scan.py` verifies
-the computation itself against a small hand-computed fixture, independent of
-the live pull's row count.
+**The number reports two bounds, not one — this matters, so read both:**
+of 7,099 disposal-bound rows in the sample carrying a federal D-code:
+- **Upper bound (`divertible_rows_any_code`), reusing `eligibility_check.py`'s
+  own rule verbatim:** 7,068 rows (99.6%), 14,009.6 tons, have *some* receiver
+  in the sample with recovery-type history for *at least one* of the row's
+  codes. This is the exact per-claimant rule the live CI gate runs — but at
+  corpus scale it is generous: a compound multi-code row needs only one of
+  its several codes to match somewhere, and it can be a different receiver
+  per code.
+- **Headline number (`divertible_rows_full_profile`), stricter:** 6,839 rows
+  (96.4%), 13,851.7 tons, have a **single** receiver whose own recovery
+  history covers *every* code on the row — one real facility that could
+  plausibly take the whole shipment, not a code matched by a different
+  receiver for each. This is the number we put on screen, because it's the
+  one that survives the "but is that really one match?" question.
 
-**State the limits in the same breath as the number:**
+Both numbers are genuinely high, and we're not going to pretend otherwise:
+only **22 distinct receivers** in the sample carry recovery-type history at
+all, and the D-codes actually occurring in this sample cluster heavily
+around common characteristic codes (ignitability `D001`, corrosivity `D002`,
+metals `D004`-`D011`) that those 22 receivers already cover — 19 rarer
+D-codes in the sample (`D012`, `D013`, `D016`, ...) have no matching recovery
+receiver at all and are correctly excluded either way. Read that as the
+actual finding, not a hedge: in this sample, matching recovery capacity for
+the common D-codes already exists elsewhere in the *same* reporting
+universe — the gap this project targets is coordination, not capacity. A
+small, concentrated pool of specialist receivers is doing the matching, which
+is also why the number is so high; say that plainly if asked. `data/corpus/`
+holds the raw cached pages so both numbers are reproducible offline;
+`tests/test_corpus_scan.py` verifies the computation against a small
+hand-computed fixture (including a compound-code case distinguishing the two
+rules), independent of the live pull's row count.
+
+**State the limits in the same breath as either number:**
 - This is a sample of the `BR_REPORTING` table pulled on one date (8,004
   rows), not the whole table.
 - `BR_REPORTING` is an annual filing, typically 12-18 months lagged at
   publication.
-- "Divertible" here means "a receiver in this same sample shares this row's
-  exact federal waste code under a recovery-type management category" —
-  necessary, not sufficient, for the row's waste to actually be diverted. No
-  permit, capacity, logistics, or cost check is performed.
-- "Divertible" means "passes this gate", not "will be diverted".
+- The any-code number is an upper bound (see above); the full-profile number
+  is stricter and is the one to lead with.
+- Either way, "divertible" means "passes this gate", not "will be diverted" —
+  necessary, not sufficient. No permit, capacity, logistics, or cost check is
+  performed.
 
 ## Snapshot provenance
 
