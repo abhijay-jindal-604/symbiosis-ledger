@@ -401,7 +401,11 @@ rules), independent of the live pull's row count.
 paginated across rows 0–6000 (7 rows retained: both demo generators'
 receiver pairs plus supporting context rows — a 7th row for the second
 stream's generator, `ALD000622464`, was added when that stream was built).
-CI reads this committed snapshot rather
+A third generator and two more receiver rows (10 total) were added for the
+third demo stream (`AKD000850701`, D001/D018, 201.834t) — pulled verbatim
+from the same 8,004-row bulk corpus already cached under `data/corpus/` for
+`agents/corpus_scan.py`, not a fresh live call, since that corpus already
+contained kiln-b's and wwtp-c's real recovery history for these codes. CI reads this committed snapshot rather
 than calling EPA live, for reliability and so CI doesn't hammer a government
 endpoint on every run. `demo/live_query.py` is the one live call in this
 repo, shown on camera, and it prints a MATCH/DIFFER verdict against this
