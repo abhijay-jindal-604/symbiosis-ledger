@@ -1,5 +1,5 @@
 .env
-out/
+out/*
 !out/manifest-*.html
 .venv/
 __pycache__/
