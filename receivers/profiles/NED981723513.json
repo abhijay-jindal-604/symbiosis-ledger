@@ -1,0 +1,11 @@
+{
+  "receiver_id": "NED981723513",
+  "accepted_streams": [],
+  "rejected_claims": [
+    {
+      "stream_id": "AK8570028649-D009-W301-2001",
+      "reason": "ELIGIBILITY DENIED \u2014 receiver NED981723513 has 0 recorded receipts of waste code D004,D005,D006,D007,D008,D009 under a recovery-type method (report cycle n/a)",
+      "date": "2026-09-12T08:41:03.363606+00:00"
+    }
+  ]
+}
