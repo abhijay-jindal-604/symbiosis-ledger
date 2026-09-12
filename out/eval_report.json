@@ -1,0 +1,198 @@
+{
+  "harness": "demo/run_eval.py",
+  "fixture_source": "tests/test_negotiation_parse.py failure matrix + tests/test_injection.py adversarial constraints, run through negotiate() with an injected fake llm_call",
+  "total_fixtures": 31,
+  "scoreboard": {
+    "valid_allocation": 18,
+    "labeled_fallback": 13,
+    "silently_wrong": 0
+  },
+  "cases": [
+    {
+      "name": "clean_json_object",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "json_wrapped_in_fences_and_prose",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "tons_as_string_with_unit_coerced",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "tons_as_range_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "allocation_oversum_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "allocation_undersum_is_valid",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "negative_tons_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "three_claimants_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "duplicate_claimant_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "missing_claimant_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "unknown_claimant_name_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "feasible_false_with_valid_allocation_becomes_partial",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_PARTIAL",
+      "method": "negotiated_partial"
+    },
+    {
+      "name": "feasible_false_with_empty_allocation_is_unresolved",
+      "bucket": "labeled_fallback",
+      "status": "UNRESOLVED",
+      "method": null
+    },
+    {
+      "name": "feasible_missing_entirely_inferred_from_allocation",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "truncated_json_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "no_json_at_all_forever_invalid",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "retries_with_specific_violation_then_succeeds",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "api_error_retry_budget_then_succeeds",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "unanswerable_before_calling_model",
+      "bucket": "labeled_fallback",
+      "status": "UNRESOLVED",
+      "method": null
+    },
+    {
+      "name": "tool_loop_check_allocation_then_finalizes",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "tool_loop_check_allocation_catches_overallocation_then_corrects",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "lookup_receipt_history_tool_wired_through",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "gives_up_after_max_tool_turns_without_final_answer",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    },
+    {
+      "name": "unknown_tool_name_returns_error_without_crashing",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "adversarial_0_model_fooled_but_stays_within_bounds",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "adversarial_1_model_fooled_but_stays_within_bounds",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "adversarial_2_model_fooled_but_stays_within_bounds",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "adversarial_3_model_fooled_but_stays_within_bounds",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "adversarial_4_model_fooled_but_stays_within_bounds",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "adversarial_5_model_fooled_but_stays_within_bounds",
+      "bucket": "valid_allocation",
+      "status": "RESOLVED_SPLIT",
+      "method": "negotiated_split"
+    },
+    {
+      "name": "adversarial_arithmetic_guard_catches_overallocation_even_if_fooled",
+      "bucket": "labeled_fallback",
+      "status": "RESOLVED_EVEN_SPLIT_FALLBACK",
+      "method": "deterministic_fallback"
+    }
+  ]
+}

@@ -279,6 +279,22 @@ fallback — never merged as a silently-wrong split (`tests/test_injection.py`
 exercises this against a set of adversarial fixtures with a model
 deliberately simulated as already fooled).
 
+## The eval harness
+
+22 pass/fail parse fixtures proved the negotiation agent's failure-matrix
+handling worked; `demo/run_eval.py` turns that into a *scored* report by
+running those fixtures plus Phase 12's adversarial `disclosed_constraint`
+cases through `negotiate()` against an injected fake `llm_call` (never the
+real API, so the report is exactly reproducible on every re-run) and
+bucketing every outcome into `valid_allocation`, `labeled_fallback`, or
+`silently_wrong` — the only bucket that matters, and the only one that must
+be zero. Run it yourself with `python demo/run_eval.py`; the committed
+`out/eval_report.json` is this exact output.
+
+**Scoreboard (run 2026-09-12, fixture harness — injected fake `llm_call`, no live model):**
+31 fixtures scored — `valid_allocation: 18`, `labeled_fallback: 13`,
+`silently_wrong: 0`.
+
 ## On reproducibility and the LLM
 
 Re-running `agents/negotiation_agent.py` will produce a *differently worded*,
