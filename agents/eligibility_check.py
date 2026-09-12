@@ -121,11 +121,22 @@ def main():
 
 
 def _find_stream_for_claimant(claimant):
+    """Find which stream file to check `claimant` against, for the manual
+    `--claimant` CLI path. Prefers a stream where this claimant has actually
+    filed a claims: entry, but falls back to the one stream file present
+    when there's exactly one and no claim matched -- otherwise a claimant
+    whose claim was deliberately never merged (e.g. an ineligible receiver's
+    denial-evidence PR, left open on its own branch rather than landing on
+    main) can never be checked from main at all, breaking the single most
+    basic command a reader would try."""
     import glob
-    for path in glob.glob("streams/*.yaml"):
+    paths = glob.glob("streams/*.yaml")
+    for path in paths:
         stream = load_stream(path)
         if any(c["claimant"] == claimant for c in (stream.get("claims") or [])):
             return path
+    if len(paths) == 1:
+        return paths[0]
     return None
 
 
