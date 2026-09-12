@@ -14,8 +14,8 @@ current_disposition:
 status: RESOLVED_PARTIAL
 claims:
 - claimant: kiln-b
-  allocated_tons: 0.0
-  schedule: No allocation due to unresolvable shortfall
+  allocated_tons: 74.1325
+  schedule: 'SEEDED BUG (demo/seed_bad_commit.py): misread constraint, over-allocated'
   disclosed_constraint: needs 15 t/week continuous; can begin immediately
 - claimant: wwtp-c
   allocated_tons: 24.1325
