@@ -12,6 +12,18 @@ declared via types.FunctionDeclaration + types.Tool, automatic execution is
 disabled so this module controls the loop, and each tool round-trip is sent
 back to the model as its own turn (FunctionDeclaration/Tool/Part.from_function_call/
 Part.from_function_response, confirmed against the current python-genai docs).
+
+Gemini 3.5 requires a `thought_signature` (an opaque, model-issued bytes
+value) to be echoed back on a reconstructed function-call turn -- confirmed
+by a real 400 INVALID_ARGUMENT during this project's own second live run
+("Function call is missing a thought_signature in functionCall parts"),
+not found in any doc example, which reconstructs the follow-up turn from
+`response.candidates[0].content` directly rather than from name+args. This
+module can't do that (negotiation_agent.py owns history across an
+in-between tool-execution step it doesn't get to see), so instead the
+signature is threaded through the generic tool_call dict as an opaque
+extra field the rest of the codebase never inspects, and reattached here
+on reconstruction.
 """
 import os
 
@@ -41,8 +53,13 @@ def _to_gemini_contents(types, messages):
         elif role == "assistant":
             tool_calls = msg.get("tool_calls")
             if tool_calls:
-                parts = [types.Part.from_function_call(name=c["name"], args=c.get("arguments") or {})
-                         for c in tool_calls]
+                parts = []
+                for c in tool_calls:
+                    part = types.Part.from_function_call(name=c["name"], args=c.get("arguments") or {})
+                    signature = c.get("_thought_signature")
+                    if signature is not None:
+                        part.thought_signature = signature
+                    parts.append(part)
                 contents.append(types.Content(role="model", parts=parts))
             else:
                 contents.append(types.Content(role="model", parts=[
@@ -57,20 +74,16 @@ def _to_gemini_contents(types, messages):
     return contents
 
 
-def _function_call_name(fc):
-    return fc.name
-
-
-def _function_call_args(fc):
-    # The python-genai docs show two slightly different attribute paths for
-    # a returned function call's arguments across SDK versions/snippets
-    # (fc.args directly, vs. fc.function_call.args); handle both defensively
-    # rather than betting on one and breaking silently on the other.
-    args = getattr(fc, "args", None)
-    if args is None:
-        inner = getattr(fc, "function_call", None)
-        args = getattr(inner, "args", None) if inner is not None else None
-    return dict(args or {})
+def _function_call_parts(response):
+    """Yields (FunctionCall, thought_signature) pairs. thought_signature
+    lives on the Part, not on FunctionCall itself, so this walks
+    response.candidates[0].content.parts directly rather than using the
+    flattened response.function_calls property, which drops it."""
+    if not response.candidates or not response.candidates[0].content:
+        return
+    for part in response.candidates[0].content.parts or []:
+        if part.function_call is not None:
+            yield part.function_call, part.thought_signature
 
 
 def get_llm_call():
@@ -108,16 +121,17 @@ def get_llm_call():
             config=types.GenerateContentConfig(**config_kwargs),
         )
 
-        function_calls = response.function_calls
-        if function_calls:
-            return {"tool_calls": [
-                {
-                    "id": getattr(fc, "id", None) or f"{_function_call_name(fc)}-{i}",
-                    "name": _function_call_name(fc),
-                    "arguments": _function_call_args(fc),
-                }
-                for i, fc in enumerate(function_calls)
-            ]}
+        tool_calls = [
+            {
+                "id": fc.id or f"{fc.name}-{i}",
+                "name": fc.name,
+                "arguments": dict(fc.args or {}),
+                "_thought_signature": signature,
+            }
+            for i, (fc, signature) in enumerate(_function_call_parts(response))
+        ]
+        if tool_calls:
+            return {"tool_calls": tool_calls}
         return {"text": response.text or ""}
 
     return llm_call
