@@ -11,6 +11,10 @@ waste:
   report_cycle: 2009
 current_disposition:
   management_category: INCINERATION
-status: UNCLAIMED
-claims: []
+status: CLAIMED_BY_wwtp-c
+claims:
+- claimant: wwtp-c
+  requested_tons: 48.0135
+  disclosed_constraint: can accept any quantity as a one-time delivery, no scheduling constraint, but
+    needs at least 25 tons to justify the pickup logistically
 resolution: null
