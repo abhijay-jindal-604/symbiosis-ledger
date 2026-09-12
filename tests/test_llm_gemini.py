@@ -45,12 +45,18 @@ def test_assistant_tool_calls_become_model_function_call_content():
     assert dict(fc.args) == {"allocation": []}
 
 
-def test_tool_result_becomes_tool_role_function_response_content():
+def test_tool_result_becomes_user_role_function_response_content():
+    """Regression test for a real 400 INVALID_ARGUMENT hit on gemini-3.6-flash
+    and newer ("Role 'tool' is not supported"): gemini-3.5-flash accepts
+    Content(role="tool", ...) for a function response (matching the
+    python-genai docs' own example), but 3.6+ rejects it and requires
+    role="user" instead -- confirmed live against the real API. "user" is
+    used here, not "tool", so this must land on a user-role Content."""
     contents = _to_gemini_contents(types, [
         {"role": "tool", "name": "check_allocation", "tool_call_id": "1",
          "content": {"ok": True, "message": "fine"}},
     ])
-    assert contents[0].role == "tool"
+    assert contents[0].role == "user"
     fr = contents[0].parts[0].function_response
     assert fr.name == "check_allocation"
     assert dict(fr.response) == {"ok": True, "message": "fine"}

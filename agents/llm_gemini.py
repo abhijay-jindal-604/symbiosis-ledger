@@ -66,7 +66,14 @@ def _to_gemini_contents(types, messages):
                     types.Part.from_text(text=msg.get("content", ""))
                 ]))
         elif role == "tool":
-            contents.append(types.Content(role="tool", parts=[
+            # The python-genai docs' own example wraps a function response in
+            # Content(role="tool", ...), and gemini-3.5-flash accepts that --
+            # but gemini-3.6-flash/3.7-flash/3.8-flash all reject it outright
+            # ("Role 'tool' is not supported"), confirmed live while adding a
+            # second negotiation protocol and needing a model off 3.5-flash's
+            # exhausted free-tier daily quota. "user" is in every version's
+            # own stated list of valid roles, so use that instead.
+            contents.append(types.Content(role="user", parts=[
                 types.Part.from_function_response(name=msg["name"], response=msg["content"])
             ]))
         else:
@@ -107,8 +114,14 @@ def get_llm_call():
         config_kwargs = dict(
             temperature=0,
             max_output_tokens=1024,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
         )
+        # "-lite" models (confirmed live on gemini-3.5-flash-lite, added to
+        # dodge another model's exhausted free-tier daily quota) reject
+        # thinking_config outright with a bare 400 INVALID_ARGUMENT and no
+        # further detail -- they apparently have no thinking mode to budget
+        # at all, unlike the full flash models this was written against.
+        if "lite" not in MODEL_NAME:
+            config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
         if gemini_tools:
             config_kwargs["tools"] = gemini_tools
             config_kwargs["automatic_function_calling"] = types.AutomaticFunctionCallingConfig(
