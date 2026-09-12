@@ -11,6 +11,9 @@ waste:
   report_cycle: 2001
 current_disposition:
   management_category: LANDFILL
-status: UNCLAIMED
-claims: []
+status: CLAIMED_BY_kiln-b
+claims:
+- claimant: kiln-b
+  requested_tons: 24.1325
+  disclosed_constraint: needs 15 t/week continuous; can begin immediately
 resolution: null
