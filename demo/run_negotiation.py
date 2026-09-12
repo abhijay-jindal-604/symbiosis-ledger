@@ -44,11 +44,34 @@ def git_show(ref, path):
     return out
 
 
+def _make_lookup_receipt_history(receivers, snapshot, waste_codes):
+    from eligibility_check import check_eligibility
+
+    def lookup_receipt_history(claimant):
+        ok, message = check_eligibility(claimant, receivers, snapshot, waste_codes)
+        return {"eligible": ok, "message": message}
+
+    return lookup_receipt_history
+
+
+def _make_get_receiver_profile(receivers):
+    from orchestrate import load_profile
+
+    def get_receiver_profile(claimant):
+        info = receivers.get(claimant)
+        if info is None:
+            return {"available": False, "message": f"unknown claimant '{claimant}'"}
+        return load_profile(info["handler_id"])
+
+    return get_receiver_profile
+
+
 def main():
     _load_env_file()
     from stream_io import load_stream_str, write_stream
     from negotiation_agent import negotiate
     from llm_gemini import get_llm_call
+    from eligibility_check import load_receivers, load_snapshot, CODE_RE
 
     status = subprocess.run(["git", "status", "--porcelain"], cwd=REPO_ROOT,
                              check=True, text=True, capture_output=True).stdout
@@ -86,8 +109,17 @@ def main():
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     log_path = f"logs/negotiation/{stream_id}-{ts}.json"
 
+    receivers = load_receivers()
+    snapshot = load_snapshot()
+    waste_codes = set(CODE_RE.findall(stream_a["waste"]["federal_waste_codes"]))
+
     llm_call = get_llm_call()
-    result = negotiate(stream_a, claim_a, claim_b, llm_call, log_path=os.path.join(REPO_ROOT, log_path))
+    result = negotiate(
+        stream_a, claim_a, claim_b, llm_call,
+        lookup_receipt_history=_make_lookup_receipt_history(receivers, snapshot, waste_codes),
+        get_receiver_profile=_make_get_receiver_profile(receivers),
+        log_path=os.path.join(REPO_ROOT, log_path),
+    )
     print("negotiate() result:", result)
 
     resolved = dict(stream_a)
