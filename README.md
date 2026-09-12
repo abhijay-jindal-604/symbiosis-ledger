@@ -109,6 +109,7 @@ needed to re-run `agents/negotiation_agent.py` itself (see below).
 | Rendered demo manifest | `out/manifest-AK8570028649-D009-W301-2001.html` |
 | Bisect-history branch (seeded bug for the recovery beat) | `demo/bisect-history`, seeded bad commit `d714804` — never on `main` |
 | Receiver memory profiles | `receivers/profiles/<receiver_id>.json`, written by `agents/orchestrate.py` |
+| **Second demo stream** (real EPA data, resolved by the tool-calling agent) | claim PRs [#9 kiln-b](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/9) / [#10 wwtp-c](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/10); resolution commit `3c0c9a1`; log `logs/negotiation/ALD000622464-D009-W403-2009-20260912T095400Z.json`; manifests `out/manifest-ALD000622464-D009-W403-2009-kiln-b.html` and `...-wwtp-c.html` (two files: a genuine 2-way split needs two shipments) |
 
 ## Memory and the recovery beat
 
@@ -136,6 +137,48 @@ Rehearsed end-to-end during this build: `git bisect run` correctly named
 `d714804` (the seeded commit) as the first bad commit against parent
 `59d6c1a` (the real, valid resolution on `main`), then `git bisect reset`
 returned the repo to a clean `main`.
+
+## A second real stream, and the tool-calling agent proven live
+
+The negotiation agent was later upgraded from a single blind prompt to a
+real tool-calling loop (`lookup_receipt_history`, `get_receiver_profile`,
+`check_allocation` — see "The insight" above). The first stream's merged
+resolution predates that upgrade, so a second real stream was added
+specifically to run the upgraded agent for real: generator `ALD000622464`
+("CHEMICAL WASTE MANGEMENT" — a real, verbatim EPA typo), Emelle AL,
+`48.0135` tons of `D009` via `INCINERATION`, report cycle 2009. `kiln-b`
+and `wwtp-c` already had real, verified `D009` METALS RECOVERY receipts in
+the committed snapshot, so both are genuinely eligible for this stream too
+— no new receiver identities needed.
+
+Disclosed constraints were designed to admit a genuine full split this
+time (one-time-delivery capacity caps, rather than stream 1's "needs
+continuous weekly supply" framing that made a full split impossible) —
+giving evidence of both outcomes in the `status`/`resolution.method` table,
+not just the partial one. The agent resolved it as a real `RESOLVED_SPLIT`
+on its first attempt, and its logged tool calls are the first real evidence
+the tool-calling upgrade actually works against a live model:
+
+1. `get_receiver_profile("kiln-b")` and `get_receiver_profile("wwtp-c")` —
+   checked each claimant's memory before proposing anything.
+2. `check_allocation({"kiln-b": 20, "wwtp-c": 28.0135})` — self-verified its
+   own proposed split (sums to exactly `48.0135`) before committing to it
+   as the final answer.
+
+Getting a real Gemini call working with tools surfaced two genuine bugs,
+both fixed and both worth knowing about if re-running this: Gemini 3.5
+requires an opaque `thought_signature` to be echoed back on a
+reconstructed function-call turn (undocumented in the SDK's own examples,
+which all reuse the raw response object rather than reconstructing it —
+see `agents/llm_gemini.py`'s docstring), and the free API tier's 5
+requests/minute limit needs a real backoff (`api_backoff=(60, 60)` in
+`demo/run_negotiation.py`) for a multi-tool-call negotiation to clear it.
+Because a genuine 2-way split can't be represented by one EPA manifest
+(one shipment, one designated facility), `agents/manifest_render.py` now
+renders one manifest per positively-allocated claimant for a
+multi-recipient resolution — `out/manifest-<stream_id>-<claimant>.html` —
+rather than one file that would otherwise silently drop every recipient
+but the first.
 
 ## On reproducibility and the LLM
 

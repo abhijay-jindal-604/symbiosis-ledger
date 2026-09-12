@@ -48,20 +48,35 @@ def manifest_tracking_number(stream_id):
     return "DEMO-" + str(uuid.uuid5(uuid.NAMESPACE_DNS, stream_id)).split("-")[0].upper()
 
 
-def resolved_claim(stream):
-    for claim in stream.get("claims") or []:
-        if (claim.get("allocated_tons") or 0) > 0:
-            return claim
-    return None
+def resolved_claims(stream):
+    """All claims with a positive allocation. A real EPA manifest is
+    shipment-specific -- one designated facility per shipment -- so a
+    genuine multi-way split (more than one claimant with tons > 0) must
+    become one manifest per claimant, never one manifest that silently
+    keeps only the first and drops the rest."""
+    return [c for c in (stream.get("claims") or []) if (c.get("allocated_tons") or 0) > 0]
 
 
-def render(stream, receivers, snapshot_rows):
+def render(stream, receivers, snapshot_rows, claim=None):
+    """Renders one manifest for a single shipment. `claim` is the specific
+    claims: entry (one designated facility, one allocated quantity) this
+    manifest is for. If omitted, defaults to the stream's sole
+    positively-allocated claim -- convenient for the common single-recipient
+    case -- but raises if there's more than one, since silently picking one
+    would drop a real shipment; see resolved_claims()."""
     e = html.escape
     stream_id = stream["stream_id"]
     generator = stream["generator"]
     waste = stream["waste"]
     resolution = stream.get("resolution") or {}
-    claim = resolved_claim(stream)
+    if claim is None:
+        claims = resolved_claims(stream)
+        if len(claims) > 1:
+            raise ValueError(
+                f"{stream_id} has {len(claims)} positively-allocated claims -- "
+                "pass claim= explicitly to render one manifest per shipment"
+            )
+        claim = claims[0] if claims else None
 
     generator_address = find_generator_address(snapshot_rows, generator["handler_id"])
     generator_address_html = e(generator_address) if generator_address else (
@@ -234,13 +249,28 @@ def main():
     receivers = load_receivers()
     snapshot_rows = load_snapshot_rows()
 
-    doc = render(stream, receivers, snapshot_rows)
-
     os.makedirs(OUT_DIR, exist_ok=True)
-    out_path = os.path.join(OUT_DIR, f"manifest-{stream['stream_id']}.html")
-    with open(out_path, "w") as f:
-        f.write(doc)
-    print(f"Wrote {out_path}")
+    claims = resolved_claims(stream)
+
+    if len(claims) <= 1:
+        # Single-recipient case (including UNRESOLVED/unclaimed): keep the
+        # plain, no-suffix filename so the one already-committed artifact
+        # for stream 1 stays byte-identical across re-renders.
+        claim = claims[0] if claims else None
+        doc = render(stream, receivers, snapshot_rows, claim=claim)
+        out_path = os.path.join(OUT_DIR, f"manifest-{stream['stream_id']}.html")
+        with open(out_path, "w") as f:
+            f.write(doc)
+        print(f"Wrote {out_path}")
+    else:
+        # Genuine multi-way split: one manifest per shipment/designated
+        # facility, since a real manifest can't represent two recipients.
+        for claim in claims:
+            doc = render(stream, receivers, snapshot_rows, claim=claim)
+            out_path = os.path.join(OUT_DIR, f"manifest-{stream['stream_id']}-{claim['claimant']}.html")
+            with open(out_path, "w") as f:
+                f.write(doc)
+            print(f"Wrote {out_path}")
 
 
 if __name__ == "__main__":
