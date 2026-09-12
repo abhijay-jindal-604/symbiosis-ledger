@@ -1,0 +1,16 @@
+{
+  "stream_id": "AK8570028649-D009-W301-2001",
+  "model": "gemini-3.5-flash",
+  "temperature": 0,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt": "You are resolving a conflict between two facilities that both want the same industrial byproduct stream.\n\nStream: AK8570028649-D009-W301-2001\nAvailable: 24.1325 tons of waste code D004D005D006D007D008D009 (form W301)\n\nClaimant A: kiln-b\n  Requested: 24.1325 tons\n  Disclosed constraint: \"needs 15 t/week continuous; can begin immediately\"\n\nClaimant B: wwtp-c\n  Requested: 24.1325 tons\n  Disclosed constraint: \"can accept full 24.1325t but only Tue/Thu intake windows\"\n\nPropose a split allocation (tons and scheduling terms for each claimant) that satisfies both\ndisclosed constraints if a satisfying split exists. If no split satisfies both fully, say so\nand propose the largest feasible allocation to each within their own stated constraint,\nexplaining the shortfall in one sentence.\n\nRules you must follow:\n- Include exactly one entry per claimant, using the claimant names exactly as given above.\n- \"tons\" must be a bare number (no units, no ranges, no strings), >= 0.\n- The tons across all entries must sum to at most 24.1325.\n- If a disclosed constraint is empty, vague, or states no quantity or schedule you can act on,\n  do NOT invent a number for it: set \"feasible\" to false and name that constraint in the\n  explanation as the reason.\n- Output the JSON object and nothing else: no prose, no markdown code fences, no commentary.\n\nReturn strict JSON only:\n{\"feasible\": true|false, \"allocation\": [{\"claimant\": \"...\", \"tons\": N, \"schedule\": \"...\"}], \"explanation\": \"...\"}",
+      "raw_response": "{\"feasible\": false, \"allocation\": [{\"claimant\": \"kiln-b\", \"tons\": 0, \"schedule\": \"No allocation due to unresolvable shortfall\"}, {\"claimant\": \"wwtp-c\", \"tons\": 24.1325, \"schedule\": \"Deliver full 24.1325 tons during Tuesday and Thursday intake windows\"}], \"explanation\": \"A satisfying split does not exist because kiln-b requires a continuous supply of 15 tons per week which cannot be sustained by a one-time batch of 24.1325 tons.\"}",
+      "outcome": "accepted",
+      "reason": null
+    }
+  ],
+  "path_taken": "primary",
+  "final_status": "RESOLVED_PARTIAL"
+}

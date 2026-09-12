@@ -11,9 +11,21 @@ waste:
   report_cycle: 2001
 current_disposition:
   management_category: LANDFILL
-status: CLAIMED_BY_kiln-b
+status: RESOLVED_PARTIAL
 claims:
 - claimant: kiln-b
-  requested_tons: 24.1325
+  allocated_tons: 0.0
+  schedule: No allocation due to unresolvable shortfall
   disclosed_constraint: needs 15 t/week continuous; can begin immediately
-resolution: null
+- claimant: wwtp-c
+  allocated_tons: 24.1325
+  schedule: Deliver full 24.1325 tons during Tuesday and Thursday intake windows
+  disclosed_constraint: can accept full 24.1325t but only Tue/Thu intake windows
+resolution:
+  method: negotiated_partial
+  resolved_by: negotiation_agent_v1
+  feasible: false
+  explanation: A satisfying split does not exist because kiln-b requires a continuous supply of 15 tons
+    per week which cannot be sustained by a one-time batch of 24.1325 tons.
+  log: logs/negotiation/AK8570028649-D009-W301-2001-20260912T081951Z.json
+  timestamp: '2026-09-12T08:19:54.367096+00:00'
