@@ -1,8 +1,15 @@
 """The negotiation agent: the one hard thing. Given two claims on the same
 stream, each carrying a disclosed_constraint the other claimant's claim
-never mentions, compute a split allocation via a single LLM call. Pure
-function of its inputs (no file writes) so it can be unit-tested against
-fixtures without touching git or the filesystem.
+never mentions, resolve a split allocation via a real tool-calling loop:
+the model can look up each claimant's actual receipt history, its own
+memory profile, and self-check a candidate allocation's arithmetic before
+committing to a final answer -- rather than being handed every fact
+pre-digested in one prompt and asked to guess at the arithmetic blind.
+
+Pure function of its inputs (no file writes, no network calls of its own):
+llm_call and the two lookup callables are all injected, so this stays
+unit-testable against fixtures without touching git, the filesystem, or a
+real API key.
 """
 import json
 import os
@@ -21,22 +28,90 @@ Claimant B: {claimant_b}
   Requested: {requested_tons_b} tons
   Disclosed constraint: "{disclosed_constraint_b}"
 
-Propose a split allocation (tons and scheduling terms for each claimant) that satisfies both
-disclosed constraints if a satisfying split exists. If no split satisfies both fully, say so
-and propose the largest feasible allocation to each within their own stated constraint,
-explaining the shortfall in one sentence.
+You have three tools available:
+- lookup_receipt_history(claimant): see the real recorded receipt history behind that claimant's
+  eligibility, rather than taking eligibility on faith.
+- get_receiver_profile(claimant): see a claimant's own prior acceptances/rejections in this system,
+  so you don't repeat a decision this system already settled.
+- check_allocation(allocation): verify a candidate split is arithmetically valid (no negative tons,
+  total <= available) BEFORE you commit to it as your final answer, so you catch your own mistake
+  instead of being rejected and having to retry.
 
-Rules you must follow:
+Use any of these tools if they would help, in any order, as many times as you need -- or none at
+all if you don't need them. When you are ready, propose a split allocation (tons and scheduling
+terms for each claimant) that satisfies both disclosed constraints if a satisfying split exists.
+If no split satisfies both fully, say so and propose the largest feasible allocation to each
+within their own stated constraint, explaining the shortfall in one sentence.
+
+Rules for your final answer:
 - Include exactly one entry per claimant, using the claimant names exactly as given above.
 - "tons" must be a bare number (no units, no ranges, no strings), >= 0.
 - The tons across all entries must sum to at most {available_tons}.
 - If a disclosed constraint is empty, vague, or states no quantity or schedule you can act on,
   do NOT invent a number for it: set "feasible" to false and name that constraint in the
   explanation as the reason.
-- Output the JSON object and nothing else: no prose, no markdown code fences, no commentary.
+- Once you are done calling tools, your final response must be the JSON object and nothing else:
+  no prose, no markdown code fences, no commentary, no further tool calls.
 
-Return strict JSON only:
+Final answer format, strict JSON only:
 {{"feasible": true|false, "allocation": [{{"claimant": "...", "tons": N, "schedule": "..."}}], "explanation": "..."}}"""
+
+TOOL_SPECS = [
+    {
+        "name": "lookup_receipt_history",
+        "description": (
+            "Look up whether a named claimant has a real recorded receipt history for this "
+            "stream's waste code under a recovery-type management method. This is the same "
+            "eligibility fact the CI gate already checked before this claim could reach "
+            "negotiation -- call this to see the underlying reason for yourself."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "claimant": {"type": "string", "description": "Exact claimant name, e.g. 'kiln-b'"},
+            },
+            "required": ["claimant"],
+        },
+    },
+    {
+        "name": "get_receiver_profile",
+        "description": (
+            "Look up a claimant's own prior history with this system: streams it has previously "
+            "been allocated, and streams/claims it was previously rejected for and why. Use this "
+            "to avoid repeating a past mistake or re-litigating a settled rejection."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {"claimant": {"type": "string"}},
+            "required": ["claimant"],
+        },
+    },
+    {
+        "name": "check_allocation",
+        "description": (
+            "Check whether a candidate allocation (a list of {claimant, tons}) is arithmetically "
+            "valid for this stream: no negative tons, and the total does not exceed the tons "
+            "available. Call this on your proposed split before returning it as your final answer."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "allocation": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "claimant": {"type": "string"},
+                            "tons": {"type": "number"},
+                        },
+                        "required": ["claimant", "tons"],
+                    },
+                },
+            },
+            "required": ["allocation"],
+        },
+    },
+]
 
 
 class NegotiationError(Exception):
@@ -187,10 +262,72 @@ def deterministic_even_split(claim_a, claim_b, available_tons):
     }
 
 
-def negotiate(stream, claim_a, claim_b, llm_call, log_path=None, max_content_retries=1,
-              max_api_retries=2, api_backoff=(2, 6)):
-    """llm_call(prompt: str) -> str (raw model text). Injected so this stays
-    a pure function testable against fixtures without a real API key."""
+# --- tool execution -----------------------------------------------------
+
+def _default_lookup_receipt_history(claimant):
+    return {"available": False, "message": "lookup_receipt_history is not available in this context"}
+
+
+def _default_get_receiver_profile(claimant):
+    return {"available": False, "message": "get_receiver_profile is not available in this context"}
+
+
+def _check_allocation_tool(allocation, available_tons):
+    if not isinstance(allocation, list):
+        return {"ok": False, "message": "allocation must be a list of {claimant, tons}"}
+    total = 0.0
+    for entry in allocation:
+        if not isinstance(entry, dict) or "tons" not in entry:
+            return {"ok": False, "message": f"malformed allocation entry: {entry!r}"}
+        try:
+            tons = _coerce_tons(entry["tons"])
+        except NegotiationError as e:
+            return {"ok": False, "message": str(e)}
+        if tons < 0:
+            return {"ok": False, "message": f"negative tons ({tons}) for {entry.get('claimant')!r}"}
+        total += tons
+    if total > available_tons + 0.01:
+        return {"ok": False, "message": f"allocation sums to {total}, exceeds available {available_tons}"}
+    return {"ok": True, "message": f"allocation sums to {total}, within available {available_tons}"}
+
+
+def _execute_tool(name, arguments, ctx):
+    arguments = arguments or {}
+    if name == "lookup_receipt_history":
+        return ctx["lookup_receipt_history"](arguments.get("claimant"))
+    if name == "get_receiver_profile":
+        return ctx["get_receiver_profile"](arguments.get("claimant"))
+    if name == "check_allocation":
+        return _check_allocation_tool(arguments.get("allocation"), ctx["available_tons"])
+    return {"error": f"unknown tool '{name}'"}
+
+
+def _call_with_api_retries(llm_call, messages, tools, max_api_retries, api_backoff):
+    """Returns (response, error). error is None on success; on exhausted
+    retries, response is None and error carries the last exception."""
+    err = None
+    for api_attempt in range(max_api_retries + 1):
+        try:
+            return llm_call(messages, tools), None
+        except Exception as e:  # network/API error budget, separate from content retries
+            err = e
+            if api_attempt >= max_api_retries:
+                return None, err
+            time.sleep(api_backoff[min(api_attempt, len(api_backoff) - 1)])
+    return None, err
+
+
+# --- the main entry point ------------------------------------------------
+
+def negotiate(stream, claim_a, claim_b, llm_call, lookup_receipt_history=None,
+              get_receiver_profile=None, log_path=None, max_content_retries=1,
+              max_api_retries=2, api_backoff=(2, 6), max_tool_turns=6):
+    """llm_call(messages, tools) -> {"tool_calls": [{"id","name","arguments"}]} or {"text": str}.
+    Injected so this stays a pure function testable against fixtures without a real API key.
+
+    lookup_receipt_history(claimant) -> dict and get_receiver_profile(claimant) -> dict are the
+    two side-effecting lookups the model can request as tools; injected for the same reason.
+    """
     available_tons = stream["waste"]["available_tons"]
     attempts = []
     path_taken = "primary"
@@ -205,37 +342,66 @@ def negotiate(stream, claim_a, claim_b, llm_call, log_path=None, max_content_ret
         _write_log(log_path, stream["stream_id"], attempts, "unanswerable", "UNRESOLVED")
         return result
 
-    prompt = build_prompt(stream, claim_a, claim_b)
+    ctx = {
+        "available_tons": available_tons,
+        "lookup_receipt_history": lookup_receipt_history or _default_lookup_receipt_history,
+        "get_receiver_profile": get_receiver_profile or _default_get_receiver_profile,
+    }
+
+    base_prompt = build_prompt(stream, claim_a, claim_b)
     last_error = None
 
     for content_attempt in range(max_content_retries + 1):
-        this_prompt = prompt if content_attempt == 0 else (
-            prompt + f'\n\nYour previous response was rejected: {last_error} '
-            "Return corrected strict JSON."
+        opening = base_prompt if content_attempt == 0 else (
+            base_prompt + f'\n\nYour previous response was rejected: {last_error} '
+            "Return corrected strict JSON as your final answer."
         )
-        raw = None
-        for api_attempt in range(max_api_retries + 1):
-            try:
-                raw = llm_call(this_prompt)
-                break
-            except Exception as e:  # network/API error budget, separate from content retries
-                if api_attempt >= max_api_retries:
-                    raw = None
-                    last_error = f"API error: {e}"
-                    break
-                time.sleep(api_backoff[min(api_attempt, len(api_backoff) - 1)])
+        messages = [{"role": "user", "content": opening}]
+        tool_log = []
+        raw_text = None
+        api_error = None
 
-        if raw is None:
-            attempts.append({"n": len(attempts) + 1, "prompt": this_prompt, "raw_response": None,
-                              "outcome": "api_error", "reason": last_error})
+        for _tool_turn in range(max_tool_turns):
+            response, err = _call_with_api_retries(llm_call, messages, TOOL_SPECS,
+                                                     max_api_retries, api_backoff)
+            if err is not None:
+                api_error = f"API error: {err}"
+                break
+
+            tool_calls = response.get("tool_calls")
+            if tool_calls:
+                messages.append({"role": "assistant", "tool_calls": tool_calls})
+                for call in tool_calls:
+                    result = _execute_tool(call["name"], call.get("arguments"), ctx)
+                    tool_log.append({"name": call["name"], "arguments": call.get("arguments"),
+                                      "result": result})
+                    messages.append({"role": "tool", "name": call["name"],
+                                      "tool_call_id": call.get("id", ""), "content": result})
+                continue
+
+            raw_text = response.get("text", "")
+            break
+        else:
+            last_error = f"model made {max_tool_turns} tool calls without a final answer"
+
+        if api_error is not None:
+            last_error = api_error
+            attempts.append({"n": len(attempts) + 1, "prompt": opening, "raw_response": None,
+                              "outcome": "api_error", "reason": last_error, "tool_calls": tool_log})
+            continue
+
+        if raw_text is None:
+            attempts.append({"n": len(attempts) + 1, "prompt": opening, "raw_response": None,
+                              "outcome": "no_final_answer", "reason": last_error,
+                              "tool_calls": tool_log})
             continue
 
         try:
-            span = extract_json_span(raw)
+            span = extract_json_span(raw_text)
             parsed = json.loads(span)
             status, normalized = validate_response(parsed, claim_a, claim_b, available_tons)
-            attempts.append({"n": len(attempts) + 1, "prompt": this_prompt, "raw_response": raw,
-                              "outcome": "accepted", "reason": None})
+            attempts.append({"n": len(attempts) + 1, "prompt": opening, "raw_response": raw_text,
+                              "outcome": "accepted", "reason": None, "tool_calls": tool_log})
             resolution_status, method = resolve_status_and_method(status)
             path_taken = "primary" if content_attempt == 0 else "retry"
             result = {
@@ -250,8 +416,8 @@ def negotiate(stream, claim_a, claim_b, llm_call, log_path=None, max_content_ret
             return result
         except NegotiationError as e:
             last_error = str(e)
-            attempts.append({"n": len(attempts) + 1, "prompt": this_prompt, "raw_response": raw,
-                              "outcome": "rejected", "reason": last_error})
+            attempts.append({"n": len(attempts) + 1, "prompt": opening, "raw_response": raw_text,
+                              "outcome": "rejected", "reason": last_error, "tool_calls": tool_log})
             continue
 
     # Exhausted content retries: deterministic fallback

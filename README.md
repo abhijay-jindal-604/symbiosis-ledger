@@ -27,11 +27,16 @@ versus "only Tue/Thu intake windows" are not fields a `WHERE` clause can
 compare. Extracting the quantitative and scheduling content from each,
 checking compatibility, and producing (or honestly refusing) a numeric split
 requires language understanding plus arithmetic reasoning over information
-that never existed anywhere in the EPA dataset. That one call —
-`agents/negotiation_agent.py` — is the actual "one hard thing" this project
-builds; everything else (the CI gate, CODEOWNERS, the merge conflict itself)
-is real GitHub/git mechanics used honestly, not AI theater built on top of
-them.
+that never existed anywhere in the EPA dataset. `agents/negotiation_agent.py`
+— the actual "one hard thing" this project builds — is not a single blind
+prompt: the model runs a real tool-calling loop, able to call
+`lookup_receipt_history` to see each claimant's real EPA receipt history
+for itself rather than take eligibility on faith, `get_receiver_profile` to
+check that claimant's own memory (CONTEXT-DUMP §8) before repeating a
+settled decision, and `check_allocation` to self-verify its own proposed
+split's arithmetic before committing to a final answer. Everything else
+(the CI gate, CODEOWNERS, the merge conflict itself) is real GitHub/git
+mechanics used honestly, not AI theater built on top of them.
 
 ## What this deliberately does not do
 
@@ -145,6 +150,16 @@ need cannot be met by wwtp-c's one-time 24.1325-ton batch, so it allocated
 the full batch to wwtp-c and 0 to kiln-b, naming the shortfall. This is a
 legitimate negotiated outcome per the `status`/`resolution.method`
 vocabulary below, not a failure that was retried away.
+
+**Note on the agent's history:** the committed resolution above and its
+log were produced by an earlier, single-call version of the agent (one
+prompt containing both claimants' full context, no tool calls). The agent
+was since upgraded to a real tool-calling loop — it can call
+`lookup_receipt_history`, `get_receiver_profile`, and `check_allocation`
+mid-negotiation rather than being handed every fact pre-digested — without
+re-litigating that resolution. A fresh run against a new stream will show
+`tool_calls` entries inside its `logs/negotiation/*.json` attempts; the
+historical log above predates that capability and legitimately has none.
 
 `status` / `resolution.method` are a controlled vocabulary so the repo can't
 overstate what produced a resolution:
