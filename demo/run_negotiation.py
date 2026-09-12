@@ -130,6 +130,12 @@ def main():
         lookup_receipt_history=_make_lookup_receipt_history(receivers, snapshot, waste_codes),
         get_receiver_profile=_make_get_receiver_profile(receivers),
         log_path=os.path.join(REPO_ROOT, log_path),
+        # Gemini's free tier is 5 requests/minute; a real tool-calling
+        # negotiation can easily make 3-6 requests in one run (one per tool
+        # round-trip), so the default (2, 6) second backoff isn't enough to
+        # clear a 429 -- confirmed by a real RESOURCE_EXHAUSTED error on this
+        # project's own second live run, which named a ~54s retry delay.
+        api_backoff=(60, 60),
     )
     print("negotiate() result:", result)
 

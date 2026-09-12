@@ -62,3 +62,32 @@ def test_unknown_role_raises():
         assert False, "expected ValueError"
     except ValueError:
         pass
+
+
+def test_assistant_tool_call_with_thought_signature_is_reattached():
+    """Regression test for a real 400 INVALID_ARGUMENT hit during this
+    project's own second live negotiation run: Gemini 3.5 requires a
+    thought_signature to be echoed back on a reconstructed function-call
+    turn, and it lives on the Part, not on FunctionCall. Confirms the
+    opaque bytes value threaded through the generic tool_call dict as
+    "_thought_signature" actually lands back on the reconstructed Part."""
+    contents = _to_gemini_contents(types, [
+        {"role": "assistant", "tool_calls": [
+            {"id": "1", "name": "check_allocation", "arguments": {"allocation": []},
+             "_thought_signature": b"opaque-signature-bytes"},
+        ]},
+    ])
+    part = contents[0].parts[0]
+    assert part.function_call.name == "check_allocation"
+    assert part.thought_signature == b"opaque-signature-bytes"
+
+
+def test_assistant_tool_call_without_thought_signature_is_still_fine():
+    """Older/simpler responses (or fakes in other tests) may not carry a
+    signature at all -- must not crash when it's absent."""
+    contents = _to_gemini_contents(types, [
+        {"role": "assistant", "tool_calls": [
+            {"id": "1", "name": "check_allocation", "arguments": {"allocation": []}},
+        ]},
+    ])
+    assert contents[0].parts[0].thought_signature is None
