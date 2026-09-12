@@ -1,0 +1,15 @@
+stream_id: AKD000850701-D001D018-W310-2007
+generator:
+  handler_id: AKD000850701
+  handler_name: FLINT HILLS RESOURCES ALASKA, LLC NORTH POLE REFINERY
+  location: NORTH POLE, AK
+waste:
+  federal_waste_codes: D001D018
+  form_code: W310
+  description: DRAINED SPENT KEROSENE FILTERS CONTAINING BENZENE
+  available_tons: 201.834
+  report_cycle: 2007
+current_disposition:
+  management_category: INCINERATION
+status: UNCLAIMED
+claims: []
