@@ -1,0 +1,16 @@
+stream_id: AK9999999999-F003D009-W231-2026
+generator:
+  handler_id: AK9999999999
+  handler_name: DEMO GENERATOR (PLANNER WALKTHROUGH)
+  location: ANCHORAGE, AK
+waste:
+  federal_waste_codes: F003D009
+  form_code: W231
+  description: MIXED SPENT SOLVENT AND MERCURY-CONTAMINATED DEBRIS (synthetic stream for demo/run_planner.py)
+  available_tons: 12.5
+  report_cycle: 2026
+current_disposition:
+  management_category: LANDFILL
+status: UNCLAIMED
+claims: []
+resolution: null
