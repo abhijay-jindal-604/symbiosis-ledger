@@ -1,4 +1,4 @@
 requests
 pyyaml
 pytest
-anthropic
+google-generativeai
