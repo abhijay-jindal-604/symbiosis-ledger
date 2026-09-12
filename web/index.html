@@ -9,6 +9,10 @@
     --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --text: #e6e8eb;
     --muted: #8b929e; --accent: #5fb0ff; --ok: #4caf7d; --bad: #e05a5a;
     --warn: #d9a441;
+    /* Two claimants competing for one stream are peers, not pass/fail, so
+       they get equal-weight hues rather than the ok/bad pair. */
+    --consign-a: #5b8ff9; --consign-b: #a56eff;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
   body {
@@ -35,6 +39,7 @@
   .status.UNCLAIMED { color: var(--muted); }
   .meta { color: var(--muted); font-size: 13px; margin: 6px 0 14px; }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 16px 0 8px; }
+  .table-scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
   th { color: var(--muted); font-weight: 500; }
@@ -59,6 +64,92 @@
   .receiver-card .name { font-weight: 600; }
   .receiver-card .id { color: var(--muted); font-size: 12px; }
   .error { color: var(--bad); }
+
+  /* --- Evidence blocks -----------------------------------------------------
+     The negotiation trace and the planner ranking are the agent's actual
+     work, so they carry more weight than the surrounding metadata. Every
+     value shown traces to a committed artifact; the raw log stays one
+     disclosure away rather than being replaced by this rendering. */
+  .evidence {
+    background: #10141b; border: 1px solid var(--border); border-radius: 6px;
+    padding: 16px 18px; margin-top: 8px;
+  }
+  .evidence-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .evidence-head .what { font-size: 13px; font-weight: 600; }
+  .evidence-head .who { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* Chain of custody: each tool call is an attested step, rail-connected. */
+  .chain { list-style: none; margin: 0 0 18px; padding: 0; position: relative; }
+  .chain::before {
+    content: ""; position: absolute; left: 7px; top: 9px; bottom: 14px;
+    width: 2px; background: #39404e; border-radius: 1px;
+  }
+  .call { position: relative; padding: 0 0 16px 30px; }
+  .call:last-child { padding-bottom: 0; }
+  .call .ord {
+    position: absolute; left: 0; top: 0; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--panel); border: 1.5px solid #4b5465;
+    font-size: 10px; line-height: 13px; text-align: center; color: #aab2c0;
+    font-variant-numeric: tabular-nums;
+  }
+  .call .sig {
+    font-family: var(--mono); font-size: 12.5px; color: var(--accent);
+    word-break: break-word;
+  }
+  .call .sig .arg { color: var(--text); }
+  .call .ret { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .call .ret strong { color: var(--text); font-weight: 500; }
+  .call .ret code { font-family: var(--mono); font-size: 11.5px; }
+  /* The agent checking its own arithmetic before committing is the decisive
+     step in the whole trace, so it gets the one emphasis in this block. */
+  .call.verify .ord { border-color: var(--ok); color: var(--ok); background: rgba(76,175,125,.14); }
+  .call.verify .ret, .call.verify .ret strong { color: var(--ok); }
+  .call.verify .ret {
+    background: rgba(76,175,125,.08); border: 1px solid rgba(76,175,125,.28);
+    padding: 5px 9px; border-radius: 3px; display: inline-block;
+  }
+
+  /* Allocation against stream capacity, the way a manifest states quantity. */
+  .alloc .total { font-size: 26px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .alloc .total .unit { font-size: 13px; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+  .bar {
+    display: flex; height: 26px; border-radius: 3px; overflow: hidden;
+    margin: 10px 0 9px; background: #0b0d11; border: 1px solid var(--border);
+  }
+  .bar .seg { min-width: 3px; }
+  .bar .seg.unallocated { background: repeating-linear-gradient(135deg, #1a1f28 0 6px, #12161d 6px 12px); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; }
+  .legend .item { display: flex; align-items: baseline; gap: 7px; }
+  .legend .swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+  .legend .qty { font-variant-numeric: tabular-nums; }
+  .legend .lbl { color: var(--muted); }
+
+  /* Planner ranking */
+  .rank { list-style: none; margin: 0; padding: 0; }
+  .rank li {
+    display: grid; grid-template-columns: 16px 1fr auto; gap: 4px 10px;
+    align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .rank li:last-child { border-bottom: none; }
+  .rank .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .rank .who { font-size: 13.5px; }
+  .rank .hid { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 8px; }
+  .rank .score { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .rank .meter {
+    grid-column: 2 / -1; height: 4px; background: #0b0d11;
+    border-radius: 2px; overflow: hidden;
+  }
+  .rank .meter i { display: block; height: 100%; background: var(--accent); }
+  .tiebreak { font-size: 12.5px; color: var(--muted); margin-top: 12px; }
+  .excluded { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); }
+  .excluded .x { display: grid; grid-template-columns: 16px 1fr; gap: 10px; }
+  .excluded .mark { color: var(--bad); font-size: 12px; }
+  .excluded .who { font-size: 13.5px; color: var(--muted); text-decoration: line-through; }
+  .excluded .why { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .excluded .why q { color: var(--text); }
 </style>
 </head>
 <body>
@@ -89,10 +180,12 @@ function claimsTable(claims) {
       <td><span class="pill ${c.eligible ? "ok" : "bad"}">${c.eligible ? "ELIGIBLE" : "DENIED"}</span></td>
     </tr>`).join("");
   return `
+    <div class="table-scroll">
     <table>
       <thead><tr><th>Claimant</th><th>Allocated</th><th>Schedule</th><th>Disclosed constraint</th><th>Eligibility</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    </div>
     <details><summary>eligibility verdicts (raw)</summary>
       <pre>${claims.map(c => esc(c.claimant + ": " + c.eligibility_verdict)).join("\n")}</pre>
     </details>`;
@@ -110,26 +203,175 @@ function resolutionBlock(resolution) {
     </div>`;
 }
 
-function negotiationLogBlock(log) {
+const SEG_COLORS = ["var(--consign-a)", "var(--consign-b)", "var(--accent)", "var(--warn)"];
+
+// Render a tool call's arguments as a readable signature rather than JSON.
+function fmtArgs(args) {
+  if (!args || !Object.keys(args).length) return "";
+  return Object.entries(args).map(([k, v]) => {
+    let val;
+    if (Array.isArray(v) && v.length && v[0] && v[0].claimant !== undefined) {
+      val = v.map(e => `${e.claimant} ${e.tons}`).join(", ");   // allocation arrays
+    } else if (typeof v === "string") {
+      val = `"${v}"`;
+    } else {
+      val = JSON.stringify(v);
+    }
+    return `${esc(k)}: <span class="arg">${esc(val)}</span>`;
+  }).join(", ");
+}
+
+// Tool returns are structured differently per tool; say what each one means
+// in plain terms, and fall back to compact JSON for anything unrecognised.
+function fmtResult(name, r) {
+  if (r == null) return "—";
+  if (name === "get_receiver_profile" && r.receiver_id) {
+    const a = (r.accepted_streams || []).length, j = (r.rejected_claims || []).length;
+    return `<strong>${esc(r.receiver_id)}</strong> — ${a} accepted, ${j} rejected on record`;
+  }
+  if (name === "check_allocation") {
+    return `<strong>${esc(r.message || (r.ok ? "valid" : "rejected"))}</strong>`;
+  }
+  if (name === "lookup_receipt_history") {
+    const n = Array.isArray(r.rows) ? r.rows.length : r.receipt_count;
+    if (n != null) return `<strong>${esc(n)}</strong> matching receipt${Number(n) === 1 ? "" : "s"} in the committed snapshot`;
+  }
+  return `<code>${esc(JSON.stringify(r))}</code>`;
+}
+
+// Allocated tonnage against the stream's capacity — how a manifest states it.
+function allocationBar(stream) {
+  const claims = (stream.claims || []).filter(c => c.allocated_tons != null);
+  if (!claims.length) return "";
+  const avail = Number(stream.waste.available_tons) || 0;
+  const allocated = claims.reduce((sum, c) => sum + Number(c.allocated_tons || 0), 0);
+  const remainder = Math.max(0, avail - allocated);
+  const denom = avail || allocated || 1;
+
+  // A claimant allocated zero tons gets no segment -- a sliver would overstate it.
+  const segs = claims.map((c, i) => {
+    const t = Number(c.allocated_tons) || 0;
+    return t > 0
+      ? `<div class="seg" style="flex:${t} 0 0;background:${SEG_COLORS[i % SEG_COLORS.length]}"></div>`
+      : "";
+  }).join("") + (remainder > 0
+    ? `<div class="seg unallocated" style="flex:${remainder} 0 0"></div>` : "");
+
+  const legend = claims.map((c, i) => `
+    <div class="item">
+      <span class="swatch" style="background:${SEG_COLORS[i % SEG_COLORS.length]}"></span>
+      <span class="qty">${esc(c.allocated_tons)}</span>
+      <span class="lbl">${esc(c.claimant)}</span>
+    </div>`).join("") + (remainder > 0 ? `
+    <div class="item">
+      <span class="swatch unallocated" style="background:#1a1f28"></span>
+      <span class="qty">${esc(remainder.toFixed(4).replace(/\.?0+$/, ""))}</span>
+      <span class="lbl">unallocated</span>
+    </div>` : "");
+
+  return `
+    <div class="alloc">
+      <div class="total">${esc(avail || allocated)}<span class="unit">tons in this stream</span></div>
+      <div class="bar" role="img" aria-label="${esc(claims.map(c => c.claimant + " " + c.allocated_tons + " tons").join(", "))}">${segs}</div>
+      <div class="legend">${legend}</div>
+    </div>`;
+}
+
+function negotiationTrace(stream) {
+  const log = stream.negotiation_log;
   if (!log) return "";
-  return `<details><summary>raw negotiation log (prompt + model response)</summary>
-    <pre>${esc(JSON.stringify(log, null, 2))}</pre>
-  </details>`;
+  const attempts = log.attempts || [];
+  const last = attempts[attempts.length - 1] || {};
+  const calls = last.tool_calls || [];
+
+  const chain = calls.map((tc, i) => {
+    const verified = tc.name === "check_allocation" && tc.result && tc.result.ok;
+    return `
+      <li class="call${verified ? " verify" : ""}">
+        <span class="ord">${i + 1}</span>
+        <div class="sig">${esc(tc.name)}(${fmtArgs(tc.arguments)})</div>
+        <div class="ret">${verified ? "✓ " : "→ "}${fmtResult(tc.name, tc.result)}</div>
+      </li>`;
+  }).join("");
+
+  const chainBlock = calls.length
+    ? `<ul class="chain">${chain}</ul>`
+    : `<div class="meta" style="margin-bottom:14px">Resolved in a single call with no tools invoked —
+       this stream predates the tool-calling agent.</div>`;
+
+  const raw = `
+    <details>
+      <summary>prompt and raw model response</summary>
+      <pre>${esc(last.prompt || "")}</pre>
+      <pre>${esc(last.raw_response || "")}</pre>
+      <details><summary>full log JSON</summary><pre>${esc(JSON.stringify(log, null, 2))}</pre></details>
+    </details>`;
+
+  return `
+    <div class="evidence">
+      <div class="evidence-head">
+        <span class="what">What the agent did</span>
+        <span class="who">${esc(log.model || "")} &nbsp; ${esc(last.outcome || "")} on attempt ${attempts.length}</span>
+      </div>
+      ${chainBlock}
+      ${allocationBar(stream)}
+      ${raw}
+    </div>`;
 }
 
 function planBlock(plan) {
   if (!plan || !plan.candidates) return "";
-  const ranked = plan.candidates.map((c, i) => `
-    <li><span>#${i + 1} ${esc(c.candidate)}</span>
-    <span>receipts=${c.receipt_count} specificity=${c.specificity} tons=${c.total_tons_handled}</span></li>`).join("");
-  const skipped = (plan.skipped || []).length
-    ? `<div class="skipped">skipped (prior rejection on record): ${plan.skipped.map(s =>
-        esc(s.candidate + " — " + s.rejection.date)).join(", ")}</div>`
+  const cands = plan.candidates;
+  const maxReceipts = Math.max(0, ...cands.map(c => Number(c.receipt_count) || 0));
+
+  const ranked = cands.map((c, i) => {
+    const n = Number(c.receipt_count) || 0;
+    const meter = maxReceipts
+      ? `<div class="meter"><i style="width:${Math.round((n / maxReceipts) * 100)}%"></i></div>` : "";
+    return `
+      <li>
+        <span class="n">${i + 1}</span>
+        <span class="who">${esc(c.candidate)}<span class="hid">${esc(c.receiver_id || "")}</span></span>
+        <span class="score">${n} receipt${n === 1 ? "" : "s"}</span>
+        ${meter}
+      </li>`;
+  }).join("");
+
+  // When nothing has a recorded receipt, the ranking turned on the declared
+  // specialty instead -- say so, rather than showing an empty set of meters.
+  const specWinner = cands.find(c => Number(c.specificity) > 0);
+  const tiebreak = (!maxReceipts && specWinner)
+    ? `<div class="tiebreak">No candidate has a recorded receipt for
+       ${esc(plan.primary_code || "this code")}, so the ranking turned on declared
+       specialty, which ${esc(specWinner.candidate)} wins.</div>`
     : "";
+
+  const skipped = (plan.skipped || []).map(s => {
+    const rej = s.rejection || {};
+    return `
+      <div class="x">
+        <span class="mark">✕</span>
+        <div>
+          <span class="who">${esc(s.candidate)}</span>
+          <div class="why">Excluded without re-querying the snapshot — rejection
+            recorded ${esc(String(rej.date || "").slice(0, 10))}.
+            ${rej.reason ? `<q>${esc(rej.reason)}</q>` : ""}</div>
+        </div>
+      </div>`;
+  }).join("");
+
   return `
-    <h3>Planner: ranked candidates (primary code ${esc(plan.primary_code || "—")})</h3>
-    <ul class="plan-list">${ranked || "<li>no candidates</li>"}</ul>
-    ${skipped}`;
+    <h3>Plan</h3>
+    <div class="evidence">
+      <div class="evidence-head">
+        <span class="what">Ranked candidates for ${esc(plan.primary_code || "—")}</span>
+        <span class="who">${cands.length} considered${(plan.skipped || []).length
+          ? `, ${plan.skipped.length} excluded from memory` : ""}</span>
+      </div>
+      <ul class="rank">${ranked || '<li><span class="who">No eligible candidate found.</span></li>'}</ul>
+      ${tiebreak}
+      ${skipped ? `<div class="excluded">${skipped}</div>` : ""}
+    </div>`;
 }
 
 function streamCard(s) {
@@ -151,7 +393,7 @@ function streamCard(s) {
 
       <h3>Resolution</h3>
       ${resolutionBlock(s.resolution)}
-      ${negotiationLogBlock(s.negotiation_log)}
+      ${negotiationTrace(s)}
 
       ${planBlock(s.plan)}
 

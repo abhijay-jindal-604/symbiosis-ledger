@@ -18,7 +18,12 @@ from llm_gemini import get_llm_call  # noqa: E402
 
 if __name__ == "__main__":
     llm_call = get_llm_call()
-    reply = llm_call("Reply with exactly one word: OK")
+    # llm_call's signature grew a messages/tools shape when tool-calling was
+    # added (PR #6); this script predates that and was left calling it with a
+    # bare string. Updated to match the real interface -- found by actually
+    # running it, per this repo's own "dry-run before you claim it works" rule.
+    result = llm_call([{"role": "user", "content": "Reply with exactly one word: OK"}])
+    reply = result.get("text", "") if isinstance(result, dict) else str(result)
     print(f"model={os.environ.get('NEGOTIATION_MODEL', 'gemini-3.5-flash')}")
     print(f"raw reply: {reply!r}")
     print("CREDIT CONFIRMED" if reply.strip() else "EMPTY RESPONSE")
