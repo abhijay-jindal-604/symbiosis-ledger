@@ -72,3 +72,7 @@ def write_stream(path, stream):
 def load_stream(path):
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+def load_stream_str(text):
+    return yaml.safe_load(text)
