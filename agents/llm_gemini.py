@@ -8,7 +8,7 @@ locally; never wired into CI, which reads the committed snapshot only).
 """
 import os
 
-MODEL_NAME = os.environ.get("NEGOTIATION_MODEL", "gemini-2.5-flash")
+MODEL_NAME = os.environ.get("NEGOTIATION_MODEL", "gemini-flash-latest")
 
 
 def get_llm_call():
@@ -19,14 +19,16 @@ def get_llm_call():
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
 
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(MODEL_NAME)
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
 
     def llm_call(prompt: str) -> str:
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 temperature=0,
                 max_output_tokens=512,
             ),
