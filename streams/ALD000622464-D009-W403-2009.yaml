@@ -11,6 +11,9 @@ waste:
   report_cycle: 2009
 current_disposition:
   management_category: INCINERATION
-status: UNCLAIMED
-claims: []
+status: CLAIMED_BY_kiln-b
+claims:
+- claimant: kiln-b
+  requested_tons: 48.0135
+  disclosed_constraint: can take up to 20 tons as a one-time delivery; no scheduling constraint
 resolution: null
