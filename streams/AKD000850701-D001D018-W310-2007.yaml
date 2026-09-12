@@ -14,6 +14,7 @@ current_disposition:
 status: CLAIMED_BY_kiln-b
 claims:
 - claimant: kiln-b
+  requested_tons: 90.0
   schedule: biweekly deliveries, 45 tons per truckload
   disclosed_constraint: can take up to 90 tons total across the quarter, but only in 45-ton truckloads
     spaced two weeks apart -- no single delivery above 45 tons
