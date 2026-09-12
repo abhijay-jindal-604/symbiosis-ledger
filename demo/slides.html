@@ -1,7 +1,7 @@
 <title>Symbiosis Ledger</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
 
 <style>
   /* Deliberately single-theme: this deck is cut against dark terminal
@@ -10,13 +10,16 @@
   :root {
     --ground: #10130e;
     --panel: #171b14;
+    --panel-2: #1c2118;
     --ink: #eef1e7;
-    --dim: #8d9481;
-    --rule: #272c22;
+    --dim: #97a189;
+    --faint: #5b6250;
+    --rule: #2a2f23;
     --hazard: #ff6a17;   /* DOT flammable placard orange -- D001 is the
                             ignitability code, so the accent is the demo
                             waste's own hazard class, not decoration */
     --recover: #74d894;
+    --claimed: #d9c15c;
 
     --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
     --body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
@@ -32,20 +35,25 @@
   }
 
   .stage {
-    min-height: 100vh;
+    min-height: 100svh;
     display: grid;
     place-items: center;
     padding: 16px;
     box-sizing: border-box;
   }
 
+  /* The deck is a fixed 16:9 canvas sized off viewport width AND height, so
+     it never exceeds either -- every size inside it is in cqi (percent of
+     THIS box's own width), which keeps the content-to-canvas ratio constant
+     at any zoom or window shape instead of reflowing unpredictably. */
   .deck {
     container-type: inline-size;
     position: relative;
-    width: min(100%, calc(100vh * 16 / 9 - 32px));
+    width: min(calc(100vw - 32px), calc((100svh - 32px) * 16 / 9));
     aspect-ratio: 16 / 9;
     background: var(--ground);
     overflow: hidden;
+    box-shadow: 0 0 0 1px var(--rule);
   }
 
   .slide {
@@ -54,8 +62,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 4.2cqi;
-    padding: 7cqi 7.5cqi;
+    padding: 6cqi 7cqi;
     box-sizing: border-box;
     opacity: 0;
     visibility: hidden;
@@ -70,129 +77,213 @@
 
   .eyebrow {
     font-family: var(--mono);
-    font-size: 1.45cqi;
+    font-size: 1.35cqi;
     font-weight: 500;
-    letter-spacing: .22em;
+    letter-spacing: .2em;
     text-transform: uppercase;
     color: var(--dim);
     display: flex;
     align-items: baseline;
-    gap: 1.4cqi;
+    gap: 1.2cqi;
+    margin: 0 0 2.6cqi;
   }
   .eyebrow b {
     color: var(--hazard);
     font-weight: 500;
   }
+  .eyebrow .of {
+    color: var(--faint);
+    letter-spacing: .1em;
+  }
 
   .source {
     font-family: var(--mono);
-    font-size: 1.3cqi;
-    line-height: 1.65;
+    font-size: 1.15cqi;
+    line-height: 1.6;
     color: var(--dim);
-    max-width: 66ch;
+    margin: 2.6cqi 0 0;
   }
+  .source b { color: var(--ink); font-weight: 500; }
 
   /* --- slide 1: the problem --------------------------------------- */
 
   .wordmark {
     font-family: var(--display);
     font-weight: 800;
-    font-size: 7.6cqi;
-    line-height: .94;
-    letter-spacing: -.02em;
-    text-transform: uppercase;
-    font-stretch: 112%;
-    margin: 0;
-    text-wrap: balance;
+    font-size: 5.6cqi;
+    line-height: 1;
+    letter-spacing: -.015em;
+    margin: 0 0 3.4cqi;
+    white-space: nowrap;
   }
 
   .stats {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5cqi;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0 3.6cqi;
     border-top: 1px solid var(--rule);
-    padding-top: 3.4cqi;
+    padding-top: 2.8cqi;
   }
-  .stat { display: flex; flex-direction: column; gap: 1cqi; }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: .8cqi;
+    padding-right: 3.6cqi;
+    border-right: 1px solid var(--rule);
+  }
+  .stat:last-child { border-right: none; padding-right: 0; }
   .figure {
     font-family: var(--display);
     font-weight: 800;
-    font-size: 6.4cqi;
+    font-size: 4.6cqi;
     line-height: 1;
-    letter-spacing: -.025em;
+    letter-spacing: -.02em;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .figure.disposal { color: var(--hazard); }
   .figure.diverted { color: var(--recover); }
+  .figure.receivers { color: var(--ink); }
   .figure small {
     font-family: var(--mono);
     font-weight: 400;
-    font-size: 1.6cqi;
+    font-size: 1.3cqi;
     letter-spacing: 0;
-    color: var(--dim);
-    margin-left: .6em;
+    color: var(--faint);
+    margin-left: .5em;
   }
   .stat p {
     margin: 0;
-    font-size: 1.85cqi;
-    line-height: 1.45;
-    max-width: 30ch;
-    color: var(--ink);
+    font-size: 1.35cqi;
+    line-height: 1.5;
+    color: var(--dim);
   }
+  .stat p b { color: var(--ink); font-weight: 500; }
 
   /* --- slide 2: the mechanism ------------------------------------- */
 
   .chain {
     display: grid;
-    grid-template-columns: 1fr auto 1fr auto 1fr;
-    align-items: stretch;
-    gap: 2.4cqi;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.6cqi;
+    margin-bottom: 2.8cqi;
   }
   .link {
     border: 1px solid var(--rule);
-    padding: 3.2cqi 2.8cqi;
+    border-radius: 3px;
+    padding: 2cqi 2.1cqi;
     display: flex;
     flex-direction: column;
-    gap: 1.6cqi;
+    gap: 1cqi;
   }
   .link.pivot { border-color: var(--hazard); background: var(--panel); }
   .link .kind {
     font-family: var(--mono);
-    font-size: 1.55cqi;
-    letter-spacing: .1em;
+    font-size: 1.15cqi;
+    letter-spacing: .08em;
     text-transform: uppercase;
-    color: var(--dim);
+    color: var(--faint);
   }
-  .link.pivot .kind { color: var(--hazard); }
+  .link.pivot .kind { color: color-mix(in srgb, var(--hazard) 70%, var(--dim)); }
   .link .what {
     font-family: var(--display);
-    font-weight: 600;
-    font-size: 3.2cqi;
-    line-height: 1.1;
-    letter-spacing: -.015em;
+    font-weight: 700;
+    font-size: 2.05cqi;
+    line-height: 1.15;
+    letter-spacing: -.01em;
   }
   .link .what em {
     font-style: normal;
     font-family: var(--mono);
     font-weight: 500;
-    font-size: .78em;
+    font-size: .82em;
     color: var(--ink);
   }
   .link.pivot .what { color: var(--hazard); }
   .link .note {
-    font-size: 1.5cqi;
-    line-height: 1.5;
+    font-size: 1.15cqi;
+    line-height: 1.45;
     color: var(--dim);
-    margin-top: auto;
-  }
-  .arrow {
-    align-self: center;
-    font-family: var(--mono);
-    font-size: 2.6cqi;
-    color: var(--rule);
   }
 
-  /* --- slide 3: the trust close ----------------------------------- */
+  .diff {
+    font-family: var(--mono);
+    font-size: 1.15cqi;
+    line-height: 1.75;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1.5cqi 2cqi;
+    white-space: pre;
+    overflow: hidden;
+  }
+  .diff .file { color: var(--dim); }
+  .diff .ours { color: var(--claimed); }
+  .diff .theirs { color: var(--recover); }
+  .diff .marker { color: var(--faint); }
+
+  /* --- slide 3: what's live in the repo right now ------------------ */
+
+  .ledger {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    column-gap: 2.6cqi;
+    row-gap: 0;
+    font-size: 1.35cqi;
+  }
+  .ledger .head {
+    font-family: var(--mono);
+    font-size: 1cqi;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding-bottom: 1cqi;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ledger .row {
+    display: contents;
+  }
+  .ledger .row > * {
+    padding: 1.55cqi 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ledger .id {
+    display: flex;
+    flex-direction: column;
+    gap: .35cqi;
+  }
+  .ledger .id .name {
+    font-family: var(--mono);
+    font-size: 1.3cqi;
+    color: var(--ink);
+  }
+  .ledger .id .desc { font-size: 1.1cqi; color: var(--faint); }
+  .ledger .tons {
+    font-family: var(--display);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--ink);
+  }
+  .ledger .tons small { font-family: var(--mono); font-weight: 400; font-size: .7em; color: var(--faint); }
+  .pill {
+    font-family: var(--mono);
+    font-size: 1.05cqi;
+    letter-spacing: .04em;
+    padding: .55cqi 1.1cqi;
+    border-radius: 100px;
+    white-space: nowrap;
+    justify-self: end;
+    border: 1px solid transparent;
+  }
+  .pill.resolved { color: var(--recover); border-color: color-mix(in srgb, var(--recover) 45%, transparent); background: color-mix(in srgb, var(--recover) 10%, transparent); }
+  .pill.partial { color: var(--claimed); border-color: color-mix(in srgb, var(--claimed) 45%, transparent); background: color-mix(in srgb, var(--claimed) 10%, transparent); }
+  .pill.pending { color: var(--hazard); border-color: color-mix(in srgb, var(--hazard) 45%, transparent); background: color-mix(in srgb, var(--hazard) 10%, transparent); }
+  .pill.unclaimed { color: var(--faint); border-color: var(--rule); }
+
+  /* --- slide 4: the trust close ------------------------------------ */
 
   .guarantees {
     display: flex;
@@ -200,61 +291,62 @@
   }
   .guarantee {
     display: grid;
-    grid-template-columns: 15cqi 1fr;
-    gap: 4cqi;
-    align-items: baseline;
-    padding: 3cqi 0;
+    grid-template-columns: 8.5cqi 1fr;
+    gap: 3cqi;
+    align-items: start;
+    padding: 2cqi 0;
     border-top: 1px solid var(--rule);
   }
   .guarantee:last-child { border-bottom: 1px solid var(--rule); }
   .score {
     font-family: var(--display);
     font-weight: 800;
-    font-size: 4.4cqi;
+    font-size: 3.2cqi;
     line-height: 1;
     letter-spacing: -.02em;
     font-variant-numeric: tabular-nums;
     color: var(--recover);
+    padding-top: .3cqi;
   }
   .score.none { color: var(--hazard); }
-  .score.glyph { font-size: 3.4cqi; }
+  .score.glyph { font-size: 2.6cqi; }
   .claim {
-    font-size: 2.15cqi;
-    line-height: 1.4;
-    margin: 0 0 .8cqi;
-    max-width: 52ch;
+    font-size: 1.55cqi;
+    line-height: 1.42;
+    margin: 0 0 .6cqi;
   }
   .where {
     font-family: var(--mono);
-    font-size: 1.35cqi;
-    color: var(--dim);
+    font-size: 1.05cqi;
+    color: var(--faint);
     margin: 0;
   }
+  .kw { font-family: var(--mono); font-size: .9em; color: var(--ink); }
 
   /* --- deck chrome ------------------------------------------------- */
 
   .chrome {
     position: absolute;
-    right: 7.5cqi;
-    bottom: 4cqi;
+    right: 7cqi;
+    bottom: 3.2cqi;
     display: flex;
     align-items: center;
-    gap: 2cqi;
+    gap: 1.6cqi;
     font-family: var(--mono);
-    font-size: 1.3cqi;
-    color: var(--dim);
-    letter-spacing: .1em;
+    font-size: 1.05cqi;
+    color: var(--faint);
+    letter-spacing: .08em;
   }
   .chrome .hint { transition: opacity .3s ease; }
   .chrome.moved .hint { opacity: 0; }
-  .dots { display: flex; gap: .9cqi; }
+  .dots { display: flex; gap: .8cqi; }
   .dots button {
-    width: 1.1cqi;
-    height: 1.1cqi;
+    width: 1cqi;
+    height: 1cqi;
     min-width: 7px;
     min-height: 7px;
     padding: 0;
-    border: 1px solid var(--dim);
+    border: 1px solid var(--faint);
     border-radius: 50%;
     background: transparent;
     cursor: pointer;
@@ -278,33 +370,39 @@
       aspect-ratio: auto;
       container-type: normal;
       overflow: visible;
+      box-shadow: none;
     }
     .slide {
       position: static;
       opacity: 1;
       visibility: visible;
-      gap: 20px;
-      padding: 40px 20px;
+      padding: 36px 20px;
       border-bottom: 1px solid var(--rule);
     }
-    .eyebrow { font-size: 11px; }
-    .source { font-size: 12px; }
-    .wordmark { font-size: 40px; }
-    .stats { grid-template-columns: 1fr; gap: 28px; padding-top: 22px; }
-    .figure { font-size: 38px; }
-    .figure small { font-size: 12px; }
-    .stat p { font-size: 15px; max-width: none; }
-    .chain { grid-template-columns: 1fr; gap: 14px; }
-    .link { padding: 18px; gap: 10px; }
-    .link .kind { font-size: 11px; }
-    .link .what { font-size: 21px; }
+    .eyebrow { font-size: 11px; margin-bottom: 18px; }
+    .source { font-size: 12px; margin-top: 18px; }
+    .wordmark { font-size: 34px; white-space: normal; margin-bottom: 24px; }
+    .stats { grid-template-columns: 1fr; gap: 20px; padding-top: 18px; }
+    .stat { border-right: none; padding-right: 0; border-bottom: 1px solid var(--rule); padding-bottom: 20px; }
+    .stat:last-child { border-bottom: none; padding-bottom: 0; }
+    .figure { font-size: 34px; }
+    .figure small { font-size: 11px; }
+    .stat p { font-size: 14px; }
+    .chain { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; }
+    .link { padding: 16px; gap: 8px; }
+    .link .kind { font-size: 10px; }
+    .link .what { font-size: 18px; }
     .link .note { font-size: 13px; }
-    .arrow { display: none; }
-    .guarantee { grid-template-columns: 1fr; gap: 10px; padding: 20px 0; }
-    .score { font-size: 30px; }
-    .score.glyph { font-size: 24px; }
-    .claim { font-size: 16px; max-width: none; }
-    .where { font-size: 12px; }
+    .diff { font-size: 11.5px; padding: 14px 16px; white-space: pre-wrap; }
+    .ledger { font-size: 13px; grid-template-columns: 1fr auto; }
+    .ledger .tons { display: none; }
+    .ledger .id .desc { font-size: 11px; }
+    .pill { font-size: 10px; padding: 4px 9px; }
+    .guarantee { grid-template-columns: 1fr; gap: 8px; padding: 18px 0; }
+    .score { font-size: 26px; padding-top: 0; }
+    .score.glyph { font-size: 21px; }
+    .claim { font-size: 15px; }
+    .where { font-size: 11px; }
     .chrome { display: none; }
   }
 </style>
@@ -313,84 +411,113 @@
   <div class="deck" id="deck" tabindex="0" aria-label="Symbiosis Ledger deck, use arrow keys">
 
     <section class="slide on" id="slide-1">
-      <div class="eyebrow"><b>01</b> The problem</div>
+      <div class="eyebrow"><b>01</b> <span class="of">/ 04</span> &nbsp;The problem</div>
       <h1 class="wordmark">Symbiosis&nbsp;Ledger</h1>
       <div class="stats">
         <div class="stat">
           <div class="figure disposal">14,039<small>tons</small></div>
-          <p>of hazardous waste in an 8,004-row EPA sample went to landfill or
-             incineration.</p>
+          <p><b>Disposal-bound</b> in an 8,004-row EPA sample &mdash; sent to landfill or incineration.</p>
         </div>
         <div class="stat">
-          <div class="figure diverted">6,839<small>of 7,099 shipments</small></div>
-          <p>had a permitted recovery facility whose own filing history covers
-             <em>every</em> waste code on the row.</p>
+          <div class="figure diverted">6,839<small>of 7,099</small></div>
+          <p><b>Had a match.</b> A recovery facility's own filing history covers every code on the row.</p>
+        </div>
+        <div class="stat">
+          <div class="figure receivers">22</div>
+          <p><b>Recovery receivers</b> seen in the sample &mdash; the match is concentrated, not everywhere.</p>
         </div>
       </div>
       <p class="source">
-        EPA Envirofacts <span style="color:var(--ink)">BR_REPORTING</span>, pulled 2026-09-12.
-        Eligibility is necessary, not sufficient &mdash; no permit, capacity or cost check is performed.
+        EPA Envirofacts <b>BR_REPORTING</b>, pulled 2026-09-12. Eligibility is necessary, not sufficient &mdash;
+        no permit, capacity, or cost check is performed.
       </p>
     </section>
 
     <section class="slide" id="slide-2">
-      <div class="eyebrow"><b>02</b> The mechanism</div>
+      <div class="eyebrow"><b>02</b> <span class="of">/ 04</span> &nbsp;The mechanism</div>
       <div class="chain">
         <div class="link">
           <div class="kind">A stream is</div>
           <div class="what">a&nbsp;<em>.yaml</em> file in a git repo</div>
-          <div class="note">One file per waste stream: handler ID, federal waste
-            codes, available tons.</div>
+          <div class="note">Handler ID, federal waste codes, form code, available tons &mdash; one file per stream.</div>
         </div>
-        <div class="arrow" aria-hidden="true">&#8594;</div>
         <div class="link">
           <div class="kind">A claim is</div>
           <div class="what">a pull request against that file</div>
-          <div class="note">The receiver writes in its own tonnage and its
-            disclosed scheduling constraint.</div>
+          <div class="note">The receiver states its own tonnage and its disclosed scheduling constraint.</div>
         </div>
-        <div class="arrow" aria-hidden="true">&#8594;</div>
         <div class="link pivot">
           <div class="kind">Two claims are</div>
-          <div class="what">a merge conflict on the same line</div>
-          <div class="note">Contention isn't modelled. Git already has a
-            primitive for it.</div>
+          <div class="what">a merge conflict, same line</div>
+          <div class="note">Contention isn't modelled &mdash; git already has a primitive for it.</div>
         </div>
       </div>
-      <p class="source">
-        streams/AKD000850701-D001D018-W310-2007.yaml &mdash; 201.834 t, waste codes D001 + D018, form W310
-      </p>
+      <div class="diff"><span class="file">streams/AKD000850701-D001D018-W310-2007.yaml</span>
+status: <span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span> <span class="ours">claim/kiln-b-north-pole</span>
+<span class="ours">CLAIMED_BY_kiln-b   &mdash; up to 90t, 45t truckloads, 2 weeks apart</span>
+<span class="marker">=======</span>
+<span class="theirs">CLAIMED_BY_wwtp-c   &mdash; any quantity, one-time, needs &ge;150t minimum</span>
+<span class="marker">&gt;&gt;&gt;&gt;&gt;&gt;&gt;</span> <span class="theirs">claim/wwtp-c-north-pole</span></div>
     </section>
 
     <section class="slide" id="slide-3">
-      <div class="eyebrow"><b>03</b> Why it holds up</div>
+      <div class="eyebrow"><b>03</b> <span class="of">/ 04</span> &nbsp;What's live in the repo right now</div>
+      <div class="ledger">
+        <div class="head">stream</div>
+        <div class="head" style="text-align:right">tons</div>
+        <div class="head" style="justify-self:end">status</div>
+
+        <div class="row">
+          <div class="id"><span class="name">AK8570028649&#8209;D009&#8209;W301</span><span class="desc">D004&ndash;D009 mix &middot; kiln-b vs. wwtp-c, infeasible split</span></div>
+          <div class="tons">24.13<small>t</small></div>
+          <div class="pill partial">RESOLVED_PARTIAL</div>
+        </div>
+        <div class="row">
+          <div class="id"><span class="name">ALD000622464&#8209;D009&#8209;W403</span><span class="desc">D009 &middot; kiln-b + wwtp-c, both fed</span></div>
+          <div class="tons">48.01<small>t</small></div>
+          <div class="pill resolved">RESOLVED_SPLIT</div>
+        </div>
+        <div class="row">
+          <div class="id"><span class="name">AKD000850701&#8209;D001D018&#8209;W310</span><span class="desc">D001+D018 &middot; the open conflict &mdash; PR #18 vs. PR #19</span></div>
+          <div class="tons">201.83<small>t</small></div>
+          <div class="pill pending">CONTESTED</div>
+        </div>
+        <div class="row">
+          <div class="id"><span class="name">AK9999999999&#8209;F003D009&#8209;W231</span><span class="desc">F003+D009 &middot; planner-ranked, no claim filed yet</span></div>
+          <div class="tons">12.50<small>t</small></div>
+          <div class="pill unclaimed">UNCLAIMED</div>
+        </div>
+      </div>
+      <p class="source">
+        Rendered from committed repo state by <b>agents/export_viewer_data.py</b> &mdash; not a live system, a static read of what's on <b>main</b>.
+      </p>
+    </section>
+
+    <section class="slide" id="slide-4">
+      <div class="eyebrow"><b>04</b> <span class="of">/ 04</span> &nbsp;Why it holds up</div>
       <div class="guarantees">
         <div class="guarantee">
           <div class="score none">0</div>
           <div>
-            <p class="claim">silently wrong allocations across 31 adversarial
-              fixtures &mdash; including prompt-injection attempts hidden inside
-              the claimants&rsquo; own constraint text.</p>
-            <p class="where">demo/run_eval.py &rarr; out/eval_report.json</p>
+            <p class="claim">silently wrong allocations across <b>31 adversarial fixtures</b> &mdash; including
+              prompt-injection attempts hidden inside the claimants&rsquo; own disclosed-constraint text.</p>
+            <p class="where"><span class="kw">demo/run_eval.py</span> &rarr; <span class="kw">out/eval_report.json</span></p>
           </div>
         </div>
         <div class="guarantee">
           <div class="score">1</div>
           <div>
-            <p class="claim">commit per resolution &mdash; so <span style="font-family:var(--mono);font-size:.92em">git bisect</span>
-              names the exact commit that broke an allocation, and hands back the
-              model response that produced it.</p>
-            <p class="where">agents/check_allocation.sh &mdash; exit 125 on untestable commits, never &ldquo;bad&rdquo;</p>
+            <p class="claim">commit per resolution &mdash; so <span class="kw">git bisect</span> names the exact
+              commit that broke an allocation, and hands back the model response that produced it.</p>
+            <p class="where"><span class="kw">agents/check_allocation.sh</span> &mdash; exit 125 on untestable commits, never &ldquo;bad&rdquo;</p>
           </div>
         </div>
         <div class="guarantee">
           <div class="score glyph">&#10006;</div>
           <div>
-            <p class="claim">The agent cannot merge its own work. Required
-              <span style="font-family:var(--mono);font-size:.92em">eligibility</span> check,
-              required CODEOWNERS review, and admin bypass disabled &mdash; the
-              repo owner is gated too.</p>
-            <p class="where">.github/workflows/eligibility-check.yml &middot; .github/CODEOWNERS &middot; enforce_admins: true</p>
+            <p class="claim">The agent cannot merge its own work. Required <span class="kw">eligibility</span> check,
+              required CODEOWNERS review, admin bypass disabled &mdash; the repo owner is gated too.</p>
+            <p class="where"><span class="kw">.github/workflows/</span> &middot; <span class="kw">.github/CODEOWNERS</span> &middot; <span class="kw">enforce_admins: true</span></p>
           </div>
         </div>
       </div>
