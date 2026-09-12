@@ -14,6 +14,7 @@ current_disposition:
 status: CLAIMED_BY_wwtp-c
 claims:
 - claimant: wwtp-c
+  requested_tons: 201.834
   schedule: one-time delivery
   disclosed_constraint: can accept any quantity as a one-time delivery, no scheduling constraint, but
     needs at least 150 tons to justify the pickup logistically
