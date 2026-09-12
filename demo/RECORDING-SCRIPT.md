@@ -131,7 +131,7 @@ Three rows, revealed together (no animation):
 
 **Show:** The PR list, then hover #18 and #19 so both titles are readable.
 Click into #18 → **Files changed** → point at the changed line.
-
+  
 **Say:**
 
 > "Two real open pull requests. Kiln-B and WWTP-C both want two hundred and
