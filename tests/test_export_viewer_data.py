@@ -75,3 +75,61 @@ def test_unresolved_stream_has_no_plan_acceptance_side_effects(monkeypatch, tmp_
     export_viewer_data.build_data()
 
     assert not os.path.exists(str(tmp_path / "profiles")) or not os.listdir(str(tmp_path / "profiles"))
+
+
+def test_trace_view_contract_tool_calls_are_exported_in_full(monkeypatch):
+    """web/index.html renders each tool call as name(arguments) -> result.
+
+    The rendered trace is the demo's central evidence that the agent used
+    tools rather than answering blind, so if the exporter ever stops
+    carrying these three keys the view degrades to an empty chain with no
+    error. Fail here instead.
+    """
+    _cd_repo_root(monkeypatch)
+    data = export_viewer_data.build_data()
+    split = next(s for s in data["streams"] if s["stream_id"] == "ALD000622464-D009-W403-2009")
+
+    calls = split["negotiation_log"]["attempts"][-1]["tool_calls"]
+    assert calls, "the split stream's resolution must carry its real tool calls"
+    for call in calls:
+        assert call["name"], "each tool call needs a name to render a signature"
+        assert "arguments" in call
+        assert "result" in call
+
+    # The self-verification step is what the trace highlights; it must be
+    # identifiable by name and carry the arithmetic verdict the view shows.
+    verify = [c for c in calls if c["name"] == "check_allocation"]
+    assert verify, "expected the agent to have verified its own allocation"
+    assert verify[-1]["result"].get("ok") is True
+    assert verify[-1]["result"].get("message")
+
+
+def test_plan_view_contract_exclusions_carry_a_reason_and_date(monkeypatch):
+    """The planner view's exclusion block quotes why a candidate was dropped.
+
+    'Excluded from memory' is only persuasive with the recorded reason and
+    date beside it, so both must survive the export.
+    """
+    _cd_repo_root(monkeypatch)
+    data = export_viewer_data.build_data()
+    with_skips = [s for s in data["streams"] if (s.get("plan") or {}).get("skipped")]
+    assert with_skips, "expected at least one stream with a remembered rejection"
+
+    for stream in with_skips:
+        for skip in stream["plan"]["skipped"]:
+            assert skip["candidate"]
+            assert skip["rejection"]["reason"], "exclusion must say why"
+            assert skip["rejection"]["date"], "exclusion must say when"
+
+
+def test_ranking_view_contract_candidates_carry_receipt_counts(monkeypatch):
+    """The ranking meters are drawn from receipt_count, and the tiebreak note
+    is shown only when every candidate has zero receipts -- so both fields
+    must be present and numeric for every candidate."""
+    _cd_repo_root(monkeypatch)
+    data = export_viewer_data.build_data()
+    for stream in data["streams"]:
+        for cand in (stream.get("plan") or {}).get("candidates", []):
+            assert isinstance(cand["receipt_count"], (int, float))
+            assert isinstance(cand["specificity"], (int, float))
+            assert cand["receiver_id"], "the view prints the real handler id"
