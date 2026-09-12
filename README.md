@@ -137,6 +137,7 @@ discipline as the manifest's "NOT TRANSMITTED" banner.
 | **Second demo stream** (real EPA data, resolved by the tool-calling agent) | claim PRs [#9 kiln-b](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/9) / [#10 wwtp-c](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/10); resolution commit `3c0c9a1`; log `logs/negotiation/ALD000622464-D009-W403-2009-20260912T095400Z.json`; manifests `out/manifest-ALD000622464-D009-W403-2009-kiln-b.html` and `...-wwtp-c.html` (two files: a genuine 2-way split needs two shipments) |
 | **Blind two-call negotiation protocol** (`negotiate_blind()`, [PR #13](https://github.com/abhijay-jindal-604/symbiosis-ledger/pull/13)) | `agents/negotiation_agent.py`; real comparison run vs. the single-call protocol in `logs/negotiation-compare/ALD000622464-D009-W403-2009-20260912T115128Z-{single,blind}.json` |
 | **Web viewer** (read-only window onto all of the above) | `web/index.html` + committed `web/data.json`, built by `agents/export_viewer_data.py`; `python -m http.server` in `web/` to open it |
+| **Corpus-scale impact number** (8,004-row bulk pull, same eligibility rule) | `agents/corpus_scan.py`; cached pull in `data/corpus/`; committed result `data/corpus_summary.json`; `python agents/corpus_scan.py --offline` recomputes it with no network call |
 
 ## Memory and the recovery beat
 
@@ -296,6 +297,51 @@ overstate what produced a resolution:
 | `RESOLVED_PARTIAL` | `negotiated_partial` | Model found no full split, but a valid largest-feasible allocation — **this is what the demo shows** |
 | `RESOLVED_EVEN_SPLIT_FALLBACK` | `deterministic_fallback` | The model path failed after retry; a plain arithmetic even split, not a reasoning result |
 | `UNRESOLVED` | `null` | Even the fallback couldn't produce a valid allocation |
+
+## The corpus-scale impact number
+
+The demo above runs on 7 hand-picked `BR_REPORTING` rows — enough to show the
+mechanism, not enough to claim anything about the scale of the problem, and
+`00-BRIEF-ADDENDUM.md` separately flags that supply-chain material matching
+has no public ground truth. `agents/corpus_scan.py` is our own defensible
+validation of that claim: an **unfiltered bulk pull of 8,004 real
+`BR_REPORTING` rows** (never the `handler_id` path filter — see "Snapshot
+provenance" below for why), pulled 2026-09-12, run through the exact same,
+unforked eligibility rule as the live CI gate (`agents/eligibility_check.py`'s
+`RECOVERY_CATEGORIES` and federal-waste-code extraction).
+
+```bash
+python agents/corpus_scan.py --offline
+# -> recomputes data/corpus_summary.json from the committed cached pull in
+#    data/corpus/, no network call, no API key
+```
+
+**The number:** of 7,099 disposal-bound rows in the sample carrying a federal
+D-code, 7,068 (99.6%) have at least one receiver *in the same sample* with
+real recovery-type receipt history for that exact D-code — representing
+**14,009.6 tons** currently reported as disposal that this gate would call
+divertible, out of 14,039.4 disposal-bound D-code tons in the sample. Only
+20 distinct receivers in the sample carry recovery-type history at all; the
+high match rate is real and traces to the fact that the D-codes actually
+occurring in this sample cluster heavily around the common characteristic
+codes (ignitability `D001`, corrosivity `D002`, metals `D004`-`D011`) that
+those 20 receivers already cover — 19 rarer D-codes in the sample (`D012`,
+`D013`, `D016`, ...) have no matching recovery receiver at all and are
+correctly excluded. `data/corpus/` holds the raw cached pages so the exact
+number above is reproducible offline; `tests/test_corpus_scan.py` verifies
+the computation itself against a small hand-computed fixture, independent of
+the live pull's row count.
+
+**State the limits in the same breath as the number:**
+- This is a sample of the `BR_REPORTING` table pulled on one date (8,004
+  rows), not the whole table.
+- `BR_REPORTING` is an annual filing, typically 12-18 months lagged at
+  publication.
+- "Divertible" here means "a receiver in this same sample shares this row's
+  exact federal waste code under a recovery-type management category" —
+  necessary, not sufficient, for the row's waste to actually be diverted. No
+  permit, capacity, logistics, or cost check is performed.
+- "Divertible" means "passes this gate", not "will be diverted".
 
 ## Snapshot provenance
 

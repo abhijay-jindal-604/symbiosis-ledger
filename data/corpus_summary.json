@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "source": "https://data.epa.gov/efservice/BR_REPORTING/rows/0:8000/JSON",
+    "pull_date": "2026-09-12",
+    "sample_size": 8004
+  },
+  "rows_scanned": 8004,
+  "disposal_bound_dcode_rows": 7099,
+  "divertible_rows": 7068,
+  "divertible_tons": 14009.5843,
+  "total_disposal_bound_dcode_tons": 14039.4113,
+  "distinct_recovery_receivers_seen": 20,
+  "limits": [
+    "This is a sample of the BR_REPORTING table pulled on one date, not the whole table.",
+    "BR_REPORTING is an annual filing, typically 12-18 months lagged at publication.",
+    "Eligibility here means 'a receiver in this same sample has recorded recovery-type receipt history for this exact federal waste code' -- necessary, not sufficient, for the row's waste to actually be diverted.",
+    "'Divertible' means 'passes this gate', not 'will be diverted' -- no permit, capacity, logistics, or cost check is performed."
+  ]
+}
