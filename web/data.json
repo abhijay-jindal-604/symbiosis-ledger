@@ -69,14 +69,14 @@
             "receiver_id": "IND000646943",
             "receipt_count": 0,
             "specificity": 1,
-            "total_tons_handled": 0.004
+            "total_tons_handled": 0.0195
           },
           {
             "candidate": "wwtp-c",
             "receiver_id": "WAD020257945",
             "receipt_count": 0,
             "specificity": 0,
-            "total_tons_handled": 0.008
+            "total_tons_handled": 0.017
           }
         ],
         "skipped": [
@@ -125,23 +125,74 @@
             "total_tons_handled": 0
           },
           {
-            "candidate": "wwtp-c",
-            "receiver_id": "WAD020257945",
-            "receipt_count": 0,
-            "specificity": 0,
-            "total_tons_handled": 0.008
-          },
-          {
             "candidate": "kiln-b",
             "receiver_id": "IND000646943",
             "receipt_count": 0,
             "specificity": 0,
-            "total_tons_handled": 0.004
+            "total_tons_handled": 0.0195
+          },
+          {
+            "candidate": "wwtp-c",
+            "receiver_id": "WAD020257945",
+            "receipt_count": 0,
+            "specificity": 0,
+            "total_tons_handled": 0.017
           }
         ],
         "skipped": []
       },
       "source_file": "streams/AK9999999999-F003D009-W231-2026.yaml"
+    },
+    {
+      "stream_id": "AKD000850701-D001D018-W310-2007",
+      "generator": {
+        "handler_id": "AKD000850701",
+        "handler_name": "FLINT HILLS RESOURCES ALASKA, LLC NORTH POLE REFINERY",
+        "location": "NORTH POLE, AK"
+      },
+      "waste": {
+        "federal_waste_codes": "D001D018",
+        "form_code": "W310",
+        "description": "DRAINED SPENT KEROSENE FILTERS CONTAINING BENZENE",
+        "available_tons": 201.834,
+        "report_cycle": 2007
+      },
+      "current_disposition": {
+        "management_category": "INCINERATION"
+      },
+      "status": "UNCLAIMED",
+      "claims": [],
+      "resolution": null,
+      "negotiation_log": null,
+      "plan": {
+        "stream_id": "AKD000850701-D001D018-W310-2007",
+        "primary_code": "D001",
+        "candidates": [
+          {
+            "candidate": "kiln-b",
+            "receiver_id": "IND000646943",
+            "receipt_count": 1,
+            "specificity": 1,
+            "total_tons_handled": 0.0195
+          },
+          {
+            "candidate": "wwtp-c",
+            "receiver_id": "WAD020257945",
+            "receipt_count": 1,
+            "specificity": 0,
+            "total_tons_handled": 0.017
+          },
+          {
+            "candidate": "recycler-d",
+            "receiver_id": "NED981723513",
+            "receipt_count": 0,
+            "specificity": 0,
+            "total_tons_handled": 0
+          }
+        ],
+        "skipped": []
+      },
+      "source_file": "streams/AKD000850701-D001D018-W310-2007.yaml"
     },
     {
       "stream_id": "ALD000622464-D009-W403-2009",
@@ -255,14 +306,14 @@
             "receiver_id": "IND000646943",
             "receipt_count": 4,
             "specificity": 1,
-            "total_tons_handled": 0.004
+            "total_tons_handled": 0.0195
           },
           {
             "candidate": "wwtp-c",
             "receiver_id": "WAD020257945",
             "receipt_count": 1,
             "specificity": 0,
-            "total_tons_handled": 0.008
+            "total_tons_handled": 0.017
           },
           {
             "candidate": "recycler-d",
