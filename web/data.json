@@ -160,8 +160,17 @@
       "current_disposition": {
         "management_category": "INCINERATION"
       },
-      "status": "UNCLAIMED",
-      "claims": [],
+      "status": "CLAIMED_BY_kiln-b",
+      "claims": [
+        {
+          "claimant": "kiln-b",
+          "requested_tons": 90.0,
+          "schedule": "biweekly deliveries, 45 tons per truckload",
+          "disclosed_constraint": "can take up to 90 tons total across the quarter, but only in 45-ton truckloads spaced two weeks apart -- no single delivery above 45 tons",
+          "eligible": true,
+          "eligibility_verdict": "ELIGIBLE \u2014 receiver IND000646943 has 1 recorded receipt(s) of waste code D001,D018 under a recovery-type method (SOLVENTS RECOVERY), by waste code"
+        }
+      ],
       "resolution": null,
       "negotiation_log": null,
       "plan": {
